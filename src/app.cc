@@ -1,4 +1,5 @@
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
 #include "app.h"
 
 const int DEFAULT_WIDTH = 1440;
@@ -22,6 +23,11 @@ void Application::init()
    
    state.window = glfwCreateWindow(DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_TITLE, NULL, NULL);
    glfwMakeContextCurrent(state.window);
+
+   if (!gladLoadGL())
+   {
+      abort();
+   }
    
    state.lastTimeStamp = glfwGetTime();
    state.timeFrequency = glfwGetTimerFrequency();
@@ -93,18 +99,18 @@ bool Application::isKeyPressed(Key key) const
 {
    switch (key)
    {
-      case (int)Key::ESCAPE:
+      case Key::ESCAPE:
          return glfwGetKey(state.window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
-      case (int)Key::FORWARD:
+      case Key::FORWARD:
          return glfwGetKey(state.window, GLFW_KEY_UP) == GLFW_PRESS ||
                 glfwGetKey(state.window, GLFW_KEY_W) == GLFW_PRESS;
-      case (int)Key::BACKWARDS:
+      case Key::BACKWARDS:
          return glfwGetKey(state.window, GLFW_KEY_DOWN) == GLFW_PRESS ||
                 glfwGetKey(state.window, GLFW_KEY_S) == GLFW_PRESS;
-      case (int)Key::LEFT:
+      case Key::LEFT:
          return glfwGetKey(state.window, GLFW_KEY_LEFT) == GLFW_PRESS ||
                 glfwGetKey(state.window, GLFW_KEY_A) == GLFW_PRESS;
-      case (int)Key::RIGHT:
+      case Key::RIGHT:
          return glfwGetKey(state.window, GLFW_KEY_RIGHT) == GLFW_PRESS ||
                 glfwGetKey(state.window, GLFW_KEY_D) == GLFW_PRESS;
    }

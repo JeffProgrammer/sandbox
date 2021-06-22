@@ -21,7 +21,7 @@ private:
    } state;
    
 public:
-   enum class Key : int
+   enum Key : int
    {
       FORWARD = 0,
       BACKWARDS,

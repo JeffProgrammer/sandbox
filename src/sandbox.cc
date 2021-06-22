@@ -1,11 +1,8 @@
 #include <stdio.h>
 #include <glm/glm.hpp>
-#include "app.h"
+#include <glad/glad.h>
 
-#ifdef __APPLE__
-#define GL_SILENCE_DEPRECATION
-#include <OpenGL/gl3.h>
-#endif
+#include "app.h"
 
 class SandboxApplication : public Application
 {
