@@ -6,6 +6,12 @@ const int DEFAULT_WIDTH = 1440;
 const int DEFAULT_HEIGHT = 900;
 const char* DEFAULT_TITLE = "Application";
 
+static void windowCallback(GLFWwindow* window, int width, int height)
+{
+   Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+   app->onWindowSizeUpdate(width, height);
+}
+
 void Application::init()
 {
    glfwInit();
@@ -36,6 +42,10 @@ void Application::init()
    
    state.cursorIsLocked = false;
    glfwSetInputMode(state.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+   glfwSetWindowUserPointer(state.window, this);
+
+   glfwSetWindowSizeCallback(state.window, windowCallback);
    
    onInit();
 }
@@ -116,4 +126,16 @@ bool Application::isKeyPressed(Key key) const
    }
    
    return false;
+}
+
+float Application::getAspectRatio() const
+{
+   int width, height;
+   getWindowSize(width, height);
+   return (float)width / (float)height;
+}
+
+void Application::getWindowSize(int& width, int& height) const
+{
+   glfwGetWindowSize(state.window, &width, &height);
 }

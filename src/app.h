@@ -43,7 +43,13 @@ public:
    void toggleCursorLock();
    
    bool isKeyPressed(Key key) const;
+
+   float getAspectRatio() const;
+
+   void getWindowSize(int& width, int& height) const;
    
+   virtual void onWindowSizeUpdate(int width, int height) = 0;
+
 protected:
    virtual void onInit() = 0;
    virtual void onDestroy() = 0;

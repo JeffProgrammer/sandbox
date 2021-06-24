@@ -17,6 +17,9 @@ add_library(glad thirdparty/glad/src/glad.c)
 
 # Our Source Code
 set(SANDBOX_SRC
+    src/core/camera.h
+    src/core/camera.cc
+
     src/app.h
     src/app.cc
     src/main.cc
@@ -26,6 +29,7 @@ set(SANDBOX_SRC
 
 add_executable(sandbox ${SANDBOX_SRC})
 target_link_libraries(sandbox glfw glad)
+target_include_directories(sandbox PRIVATE src)
 
 # OpenGL Library
 if (APPLE)
