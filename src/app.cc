@@ -139,3 +139,40 @@ void Application::getWindowSize(int& width, int& height) const
 {
    glfwGetWindowSize(state.window, &width, &height);
 }
+
+
+void Application::validateShaderCompilation(GLuint shader)
+{
+   GLint status;
+   glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+   if (!status)
+   {
+      GLint len;
+      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+
+      GLchar* log = new GLchar[len];
+      glGetShaderInfoLog(shader, len, NULL, log);
+
+      printf("OpenGL Shader Compiler Error: %s\n", log);
+      delete[] log;
+      abort();
+   }
+}
+
+void Application::validateShaderLinkCompilation(GLuint program)
+{
+   GLint status;
+   glGetProgramiv(program, GL_LINK_STATUS, &status);
+   if (!status)
+   {
+      GLint len;
+      glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
+
+      GLchar* log = new GLchar[len];
+      glGetProgramInfoLog(program, len, NULL, log);
+
+      printf("OpenGL Shader Linking Error: %s\n", log);
+      delete[] log;
+      abort();
+   }
+}

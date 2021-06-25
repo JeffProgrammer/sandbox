@@ -5,6 +5,8 @@
 
 struct GLFWwindow;
 
+typedef uint32_t GLuint;
+
 class Application
 {
 private:
@@ -48,6 +50,10 @@ public:
 
    void getWindowSize(int& width, int& height) const;
    
+   void validateShaderCompilation(GLuint shader);
+
+   void validateShaderLinkCompilation(GLuint program);
+
    virtual void onWindowSizeUpdate(int width, int height) = 0;
 
 protected:
