@@ -6,7 +6,7 @@ const int DEFAULT_WIDTH = 1440;
 const int DEFAULT_HEIGHT = 900;
 const char* DEFAULT_TITLE = "Application";
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(__APPLE__)
 #define OPENGL_DEBUG
 #endif
 
@@ -33,6 +33,7 @@ void Application::init()
 #ifdef __APPLE__
    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+   glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_FALSE);
 #else
    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);

@@ -8,6 +8,8 @@ function(advanced_option_off)
     endforeach()
 endfunction()
 
+set(CMAKE_CXX_STANDARD 14)
+
 advanced_option_off(GLFW_BUILD_DOCS GLFW_BUILD_EXAMPLES GLFW_BUILD_TESTS GLFW_USE_OSMESA GLFW_VULKAN_STATIC GLFW_INSTALL BUILD_SHARED_LIBS)
 
 # Third Party

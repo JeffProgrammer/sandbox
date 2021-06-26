@@ -68,26 +68,23 @@ protected:
 
 class ApplicationRep
 {
-protected:
+public:
    static ApplicationRep* sLast;
    ApplicationRep* mNext;
+   std::string mName;
 
-public:
    virtual Application* create() = 0;
 };
 
 template<typename T>
 class ConcreteApplicationRep : public ApplicationRep
 {
-private:
-   std::string mName;
-
 public:
-   ConcreteApplicationRep(const std::string &name) :
-      mName(name)
+   ConcreteApplicationRep(const std::string &name)
    {
       mNext = sLast;
       sLast = this;
+      mName = name;
    }
 
    virtual Application* create() override
@@ -106,9 +103,9 @@ public:
       return nullptr;
    }
 
-   static std::vector<Application*> getListOfApplications()
+   static std::vector<ApplicationRep*> getListOfApplications()
    {
-      std::vector<Application*> apps;
+      std::vector<ApplicationRep *> apps;
 
       for (ApplicationRep* rep = sLast; rep != nullptr; rep = rep->mNext)
          apps.push_back(rep);
