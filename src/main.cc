@@ -1,15 +1,16 @@
 #include "app.h"
-#include "sandbox.cc"
+#include "apps/cube/cubeApp.h"
 
+Application* gApplication;
 
 int main(int argc, char *argv[])
 {
-   Application* app = new SandboxApplication;
-   app->init();
+   gApplication = new CubeApplication;
+   gApplication->init();
    
-   while (app->update());
+   while (gApplication->update());
    
-   app->destroy();
+   gApplication->destroy();
    return 0;
 }
 

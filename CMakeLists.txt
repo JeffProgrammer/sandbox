@@ -24,7 +24,11 @@ set(SANDBOX_SRC
     src/app.cc
     src/main.cc
 
-    src/sandbox.cc
+    src/apps/main/mainApp.h
+    src/apps/main/mainApp.cc
+
+    src/apps/cube/cubeApp.h
+    src/apps/cube/cubeApp.cc
 )
 
 add_executable(sandbox ${SANDBOX_SRC})

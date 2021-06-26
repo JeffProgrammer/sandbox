@@ -6,6 +6,8 @@ const int DEFAULT_WIDTH = 1440;
 const int DEFAULT_HEIGHT = 900;
 const char* DEFAULT_TITLE = "Application";
 
+ApplicationRep* ApplicationRep::sLast = nullptr;
+
 static void windowCallback(GLFWwindow* window, int width, int height)
 {
    Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
@@ -18,7 +20,7 @@ void Application::init()
    
    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-   
+
 #ifdef __APPLE__
    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);

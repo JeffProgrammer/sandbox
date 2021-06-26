@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
-#include "app.h"
-#include "core/camera.h"
+#include "apps/cube/cubeApp.h"
+
+IMPLEMENT_APPLICATION(CubeApplication);
 
 const float VIEW_DISTANCE = 500.0f;
 
@@ -28,7 +29,7 @@ constexpr GLchar* vertShader =
 #ifdef __APPLE__
 "#version 410\n"
 #else
-"#version 430 core\n"
+"#version 430\n"
 #endif
 "layout(location = 0) in vec3 pos;\n"
 "layout(location = 1) in vec3 normal;\n"
@@ -54,7 +55,7 @@ constexpr GLchar* fragShader =
 "#version 430\n"
 #endif
 "in vec3 fNORMAL;\n"
-"loyout(location = 0) out vec4 color;\n"
+"layout(location = 0) out vec4 color;\n"
 "\n"
 "layout(std140) uniform SunBuffer {\n"
 "   vec4 sun_dir;\n"
@@ -63,26 +64,11 @@ constexpr GLchar* fragShader =
 "} light;\n"
 "\n"
 "void main() {\n"
-"   float nL = clamp(dot(fNORMAL, light.sun_dir), 0.0, 1.0);\n"
+"   float nL = clamp(dot(fNORMAL, vec3(light.sun_dir)), 0.0, 1.0);\n"
 "   color = light.sun_color * nL + light.ambient_color;\n"
 "}";
 
-struct CameraUbo
-{
-   glm::mat4 viewMatrix;
-   glm::mat4 projMatrix;
-};
-
-struct SunUbo
-{
-   glm::vec4 sunDir;
-   glm::vec4 sunColor;
-   glm::vec4 ambientColor;
-};
-
-class SandboxApplication : public Application
-{
-   virtual void onInit() override
+   void CubeApplication::onInit()
    {
       camera.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
       camera.setYawPitch(0.0f, -0.45f);
@@ -97,12 +83,12 @@ class SandboxApplication : public Application
       initGL();
    }
    
-   virtual void onDestroy() override
+   void CubeApplication::onDestroy()
    {
       destroyGL();
    }
    
-   virtual void onUpdate(double dt) override
+   void CubeApplication::onUpdate(double dt)
    {
       if (isKeyPressed(Key::ESCAPE))
          toggleCursorLock();
@@ -111,13 +97,13 @@ class SandboxApplication : public Application
       render(dt);
    }
    
-   virtual void onWindowSizeUpdate(int width, int height) override
+   void CubeApplication::onWindowSizeUpdate(int width, int height)
    {
       windowWidth = width;
       windowHeight = height;
    }
 
-   void updateCamera(double dt)
+   void CubeApplication::updateCamera(double dt)
    {
       Move move;
       if (isKeyPressed(Key::FORWARD))   move.y += 1.0f;
@@ -129,15 +115,19 @@ class SandboxApplication : public Application
       camera.update(dt, move);
    }
 
-   void updatePerspectiveMatrix()
+   void CubeApplication::updatePerspectiveMatrix()
    {
       camera.setProjectionMatrix(glm::perspective(1.5708f, getAspectRatio(), 0.01f, VIEW_DISTANCE));
 
       camera.getMatrices(cameraData.projMatrix, cameraData.viewMatrix);
    }
 
-   void initGL()
+   void CubeApplication::initGL()
    {
+      printf("GL_RENDERER: %s\n", glGetString(GL_RENDERER));
+      printf("GL_VENDOR: %s\n", glGetString(GL_VENDOR));
+      printf("GL_VERSION: %s\n", glGetString(GL_VERSION));
+
       glGenVertexArrays(1, &vao);
       glBindVertexArray(vao);
 
@@ -162,7 +152,7 @@ class SandboxApplication : public Application
       //glFrontFace(GL_CW);
    }
 
-   void initUBOs()
+   void CubeApplication::initUBOs()
    {
       glGenBuffers(1, &cameraUbo);
       glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
@@ -173,7 +163,7 @@ class SandboxApplication : public Application
       glBufferData(GL_UNIFORM_BUFFER, sizeof(SunUbo), &sunData, GL_STATIC_DRAW);
    }
 
-   void initShader()
+   void CubeApplication::initShader()
    {
       GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
       glShaderSource(vShader, 1, &vertShader, NULL);
@@ -189,6 +179,8 @@ class SandboxApplication : public Application
       glAttachShader(shaderProgram, vShader);
       glAttachShader(shaderProgram, fShader);
       glLinkProgram(shaderProgram);
+      glDetachShader(shaderProgram, vShader);
+      glDetachShader(shaderProgram, fShader);
       glDeleteShader(vShader);
       glDeleteShader(fShader);
       validateShaderLinkCompilation(shaderProgram);
@@ -198,8 +190,11 @@ class SandboxApplication : public Application
       uniformCameraLocationBlock = glGetUniformBlockIndex(shaderProgram, "CameraBuffer");
    }
 
-   void destroyGL()
+   void CubeApplication::destroyGL()
    {
+      glUseProgram(0);
+      glDeleteProgram(shaderProgram);
+
       GLuint deleteBuffers[4] = { cubeVbo, cubeIbo, cameraUbo, sunUbo };
       glDeleteBuffers(4, deleteBuffers);
 
@@ -207,7 +202,7 @@ class SandboxApplication : public Application
       glDeleteVertexArrays(1, &vao);
    }
 
-   void render(double dt)
+   void CubeApplication::render(double dt)
    {
       glViewport(0, 0, windowWidth, windowHeight);
       glClear(GL_COLOR_BUFFER_BIT);
@@ -232,23 +227,3 @@ class SandboxApplication : public Application
 
       glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, NULL);
    }
-
-   Camera camera;
-   CameraUbo cameraData;
-   SunUbo sunData;
-
-   int windowWidth;
-   int windowHeight;
-
-   GLuint shaderProgram;
-
-   GLuint cubeVbo;
-   GLuint cubeIbo;
-   GLuint vao;
-   GLuint cameraUbo;
-   GLuint sunUbo;
-
-   GLuint uniformModelMatLocation;
-   GLuint uniformSunLocationBlock;
-   GLuint uniformCameraLocationBlock;
-};
