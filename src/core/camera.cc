@@ -2,7 +2,7 @@
 #include "core/camera.h"
 
 #define CAMERA_SPEED 10.0f
-#define MOUSE_SPEED -0.005f
+#define MOUSE_SPEED -0.0025f
 #define PI 3.14159f
 #define PI_2 1.570796f
 
@@ -43,4 +43,5 @@ void Camera::update(double dt, const Move& move)
 
     glm::vec3 center = mPosition + direction;
     mViewMatrix = glm::lookAt(mPosition, center, up);
+
 }

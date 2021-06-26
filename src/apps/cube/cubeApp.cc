@@ -70,11 +70,12 @@ constexpr GLchar* fragShader =
 
    void CubeApplication::onInit()
    {
-      camera.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
-      camera.setYawPitch(0.0f, -0.45f);
+      camera.setPosition(glm::vec3(1.8f, 2.0f, 1.85f));
+      camera.setYawPitch(-2.34f, -0.58f);
       updatePerspectiveMatrix();
 
       getWindowSize(windowWidth, windowHeight);
+      toggleCursorLock();
 
       sunData.sunDir = glm::vec4(0.32f, 0.75f, 0.54f, 0.0f);
       sunData.sunColor = glm::vec4(1.4f, 1.2f, 0.4f, 0.0f);
@@ -111,13 +112,17 @@ constexpr GLchar* fragShader =
       if (isKeyPressed(Key::RIGHT))     move.x += 1.0f;
       if (isKeyPressed(Key::LEFT))      move.x -= 1.0f;
 
-      updatePerspectiveMatrix();
+      glm::vec2 mouse = getMouseDelta();
+      move.pitch = mouse.y;
+      move.yaw = mouse.x;
+
       camera.update(dt, move);
+      updatePerspectiveMatrix();
    }
 
    void CubeApplication::updatePerspectiveMatrix()
    {
-      camera.setProjectionMatrix(glm::perspective(1.5708f, getAspectRatio(), 0.01f, VIEW_DISTANCE));
+      camera.setProjectionMatrix(glm::perspective((float)glm::radians(110.0), getAspectRatio(), 0.01f, VIEW_DISTANCE));
 
       camera.getMatrices(cameraData.projMatrix, cameraData.viewMatrix);
    }
@@ -137,8 +142,8 @@ constexpr GLchar* fragShader =
 
       glEnableVertexAttribArray(0);
       glEnableVertexAttribArray(1);
-      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-      glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)(3*sizeof(float)));
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, NULL);
+      glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)12);
 
       glGenBuffers(1, &cubeIbo);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeIbo);
@@ -146,6 +151,8 @@ constexpr GLchar* fragShader =
 
       initShader();
       initUBOs();
+
+      glEnable(GL_DEPTH_TEST);
 
       //glEnable(GL_CULL_FACE);
       //glCullFace(GL_BACK);
@@ -188,6 +195,12 @@ constexpr GLchar* fragShader =
       uniformModelMatLocation = glGetUniformLocation(shaderProgram, "modelMatrix");
       uniformSunLocationBlock = glGetUniformBlockIndex(shaderProgram, "SunBuffer");
       uniformCameraLocationBlock = glGetUniformBlockIndex(shaderProgram, "CameraBuffer");
+
+      cameraUboLocation = 0;
+      sunUboLocation = 1;
+
+      glUniformBlockBinding(shaderProgram, uniformCameraLocationBlock, cameraUboLocation);
+      glUniformBlockBinding(shaderProgram, uniformSunLocationBlock, sunUboLocation);
    }
 
    void CubeApplication::destroyGL()
@@ -205,7 +218,7 @@ constexpr GLchar* fragShader =
    void CubeApplication::render(double dt)
    {
       glViewport(0, 0, windowWidth, windowHeight);
-      glClear(GL_COLOR_BUFFER_BIT);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glClearColor(0.0, 0.0, 0.0, 1.0);
 
       glUseProgram(shaderProgram);
@@ -221,8 +234,8 @@ constexpr GLchar* fragShader =
       glBindBuffer(GL_ARRAY_BUFFER, cubeVbo);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeIbo);
 
-      glBindBufferBase(GL_UNIFORM_BUFFER, uniformCameraLocationBlock, cameraUbo);
-      glBindBufferBase(GL_UNIFORM_BUFFER, uniformSunLocationBlock, sunUbo);
+      glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
+      glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
       glUniformMatrix4fv(uniformModelMatLocation, 1, GL_FALSE, (const GLfloat*)&cubeModelMat[0]);
 
       glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, NULL);

@@ -45,6 +45,8 @@ public:
    glm::vec2 getMouseDelta() const;
 
    void toggleCursorLock();
+
+   void setWindowTitle(const char* title);
    
    bool isKeyPressed(Key key) const;
 
@@ -120,3 +122,11 @@ public:
 
 #define IMPLEMENT_APPLICATION(klass) \
    ConcreteApplicationRep<klass> klass::sConcreteClassRep(#klass)
+
+#ifndef NDEBUG
+#define GL_CHECKERRORS() checkErrors(__FILE__, __LINE__)
+#else
+#define GL_CHECKERRORS()
+#endif
+
+void checkErrors(const char* fileName, int lineNumber);

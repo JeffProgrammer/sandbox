@@ -2,10 +2,10 @@
 
 struct Move
 {
-   float x;
-   float y;
-   float yaw;
-   float pitch;
+   float x = 0.0f;
+   float y = 0.0f;
+   float yaw = 0.0f;
+   float pitch = 0.0f;
 };
 
 class Camera
@@ -23,6 +23,11 @@ public:
    inline void setPosition(const glm::vec3& pos)
    {
       mPosition = pos;
+   }
+
+   inline glm::vec3 getPosition() const
+   {
+      return mPosition;
    }
 
    inline void setYawPitch(float yaw, float pitch)

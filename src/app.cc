@@ -6,12 +6,21 @@ const int DEFAULT_WIDTH = 1440;
 const int DEFAULT_HEIGHT = 900;
 const char* DEFAULT_TITLE = "Application";
 
+#ifndef NDEBUG
+#define OPENGL_DEBUG
+#endif
+
 ApplicationRep* ApplicationRep::sLast = nullptr;
 
 static void windowCallback(GLFWwindow* window, int width, int height)
 {
    Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
    app->onWindowSizeUpdate(width, height);
+}
+
+static void APIENTRY debugGLCallbackProc(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userData)
+{
+   printf("OpenGL %s: Message: %s\n", type == GL_DEBUG_TYPE_ERROR ? "Error" : "Information", message);
 }
 
 void Application::init()
@@ -27,6 +36,9 @@ void Application::init()
 #else
    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+#ifdef OPENGL_DEBUG
+   glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+#endif
 #endif
    
    state.window = glfwCreateWindow(DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_TITLE, NULL, NULL);
@@ -36,6 +48,11 @@ void Application::init()
    {
       abort();
    }
+
+#ifdef OPENGL_DEBUG
+   glEnable(GL_DEBUG_OUTPUT);
+   glDebugMessageCallback(debugGLCallbackProc, NULL);
+#endif
    
    state.lastTimeStamp = glfwGetTime();
    state.timeFrequency = glfwGetTimerFrequency();
@@ -107,6 +124,11 @@ void Application::toggleCursorLock()
    glfwSetInputMode(state.window, GLFW_CURSOR, state.cursorIsLocked ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 }
 
+void Application::setWindowTitle(const char* title)
+{
+   glfwSetWindowTitle(state.window, title);
+}
+
 bool Application::isKeyPressed(Key key) const
 {
    switch (key)
@@ -176,5 +198,28 @@ void Application::validateShaderLinkCompilation(GLuint program)
       printf("OpenGL Shader Linking Error: %s\n", log);
       delete[] log;
       abort();
+   }
+}
+
+void checkErrors(const char* fileName, int lineNumber)
+{
+   GLenum error = GL_NO_ERROR;
+   while ((error = glGetError()) != GL_NO_ERROR)
+   {
+      printf("//--------------------------------------------------------\n");
+      printf("OpenGL Error:\n");
+      switch (error) {
+      case 0x500: printf("Code: Invalid Enum\n"); break;
+      case 0x501: printf("Code: Invalid Value\n"); break;
+      case 0x502: printf("Code: Invalid Operation\n"); break;
+      case 0x503: printf("Code: Stack Overflow\n"); break;
+      case 0x504: printf("Code: Stack Underflow\n"); break;
+      case 0x505: printf("Code: Out of Memory\n"); break;
+      case 0x506: printf("Code: Invalid Framebuffer Operation\n"); break;
+      default:    printf("Code: Unkown\n\n"); break;
+      }
+      printf("File: %s\n", fileName);
+      printf("Line Number: %d\n", lineNumber);
+      printf("//--------------------------------------------------------\n");
    }
 }

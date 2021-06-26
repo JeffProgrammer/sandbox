@@ -3,8 +3,8 @@
 
 struct CameraUbo
 {
-   glm::mat4 viewMatrix;
    glm::mat4 projMatrix;
+   glm::mat4 viewMatrix;
 };
 
 struct SunUbo
@@ -52,4 +52,7 @@ private:
    GLuint uniformModelMatLocation;
    GLuint uniformSunLocationBlock;
    GLuint uniformCameraLocationBlock;
+
+   GLuint cameraUboLocation;
+   GLuint sunUboLocation;
 };
