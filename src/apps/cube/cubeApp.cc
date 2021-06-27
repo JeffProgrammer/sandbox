@@ -151,12 +151,6 @@ constexpr GLchar* fragShader =
 
       initShader();
       initUBOs();
-
-      glEnable(GL_DEPTH_TEST);
-
-      //glEnable(GL_CULL_FACE);
-      //glCullFace(GL_BACK);
-      //glFrontFace(GL_CW);
    }
 
    void CubeApplication::initUBOs()
@@ -220,6 +214,11 @@ constexpr GLchar* fragShader =
       glViewport(0, 0, windowWidth, windowHeight);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glClearColor(0.0, 0.0, 0.0, 1.0);
+      
+      glEnable(GL_DEPTH_TEST);
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_FRONT);
+      glFrontFace(GL_CW);
 
       glUseProgram(shaderProgram);
 
