@@ -22,6 +22,8 @@ private:
       double currentMouseX;
       double currentMouseY;
       bool cursorIsLocked;
+      Application *queuedApp;
+      bool isQueued = false;
    } state;
    
 public:
@@ -59,6 +61,8 @@ public:
    void validateShaderLinkCompilation(GLuint program);
 
    virtual void onWindowSizeUpdate(int width, int height) = 0;
+   
+   void queueAppSwitch(const std::string &app);
 
 protected:
    virtual void onInit() = 0;
@@ -76,7 +80,7 @@ public:
 
    virtual Application* create() = 0;
    
-   static Application* get(const std::string &searchName)
+   static Application* create(const std::string &searchName)
    {
       for (ApplicationRep* rep = sLast; rep != nullptr; rep = rep->mNext)
       {

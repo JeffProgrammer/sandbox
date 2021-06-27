@@ -1,8 +1,11 @@
 #include <imgui.h>
 #include <glad/glad.h>
+#include "app.h"
 #include "apps/main/mainApp.h"
 
 IMPLEMENT_APPLICATION(MainApplication);
+
+extern Application *gApplication;
 
 void MainApplication::onWindowSizeUpdate(int width, int height)
 {
@@ -47,6 +50,10 @@ void MainApplication::onRenderImGUI(double dt)
 
    ImGui::Begin("Application");
    ImGui::ListBox("", &selectedIndex, names.data(), (int)names.size());
+   if (ImGui::Button("Load Selected Application"))
+   {
+      queueAppSwitch(names[selectedIndex]);
+   }
    ImGui::End();
    
    ImGui::Render();

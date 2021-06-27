@@ -4,6 +4,7 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include "app.h"
+#include "apps/main/mainApp.h"
 
 const int DEFAULT_WIDTH = 1440;
 const int DEFAULT_HEIGHT = 900;
@@ -12,6 +13,8 @@ const char* DEFAULT_TITLE = "Application";
 #if !defined(NDEBUG) && !defined(__APPLE__)
 #define OPENGL_DEBUG
 #endif
+
+extern Application* gApplication;
 
 ApplicationRep* ApplicationRep::sLast = nullptr;
 
@@ -97,7 +100,31 @@ void Application::destroy()
 bool Application::update()
 {
    if (glfwWindowShouldClose(state.window))
-      return false;
+   {
+      // If we're main we're done.
+      if (dynamic_cast<MainApplication*>(this))
+      {
+         return false;
+      }
+      
+      // Go ahead and switch back to main
+      destroy();
+      delete gApplication;
+      gApplication = new MainApplication;
+      gApplication->init();
+      return true;
+   }
+   
+   if (state.isQueued)
+   {
+      // switch apps
+      destroy();
+      delete gApplication;
+      gApplication = state.queuedApp;
+      gApplication->init();
+
+      return true;
+   }
  
    glfwPollEvents();
    
@@ -221,6 +248,12 @@ void Application::validateShaderLinkCompilation(GLuint program)
       delete[] log;
       abort();
    }
+}
+
+void Application::queueAppSwitch(const std::string &app)
+{
+   state.queuedApp = ApplicationRep::create(app);
+   state.isQueued = true;
 }
 
 void checkErrors(const char* fileName, int lineNumber)
