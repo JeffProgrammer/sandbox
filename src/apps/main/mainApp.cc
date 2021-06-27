@@ -21,3 +21,8 @@ void MainApplication::onUpdate(double dt)
 {
 
 }
+
+void MainApplication::onRenderImGUI(double dt)
+{
+
+}

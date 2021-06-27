@@ -64,6 +64,7 @@ protected:
    virtual void onInit() = 0;
    virtual void onDestroy() = 0;
    virtual void onUpdate(double dt) = 0;
+   virtual void onRenderImGUI(double dt) = 0;
 };
 
 class ApplicationRep

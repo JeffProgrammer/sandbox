@@ -17,6 +17,16 @@ add_subdirectory(thirdparty/glfw)
 
 add_library(glad thirdparty/glad/src/glad.c)
 
+add_library(imgui 
+    thirdparty/imgui/imgui.cpp
+    thirdparty/imgui/imgui_draw.cpp
+    thirdparty/imgui/imgui_tables.cpp
+    thirdparty/imgui/imgui_widgets.cpp
+
+    thirdparty/imgui/backends/imgui_impl_glfw.cpp
+    thirdparty/imgui/backends/imgui_impl_opengl3.cpp
+)
+
 # Our Source Code
 set(SANDBOX_SRC
     src/core/camera.h
@@ -34,7 +44,7 @@ set(SANDBOX_SRC
 )
 
 add_executable(sandbox ${SANDBOX_SRC})
-target_link_libraries(sandbox glfw glad)
+target_link_libraries(sandbox glfw glad imgui)
 target_include_directories(sandbox PRIVATE src)
 
 # OpenGL Library
@@ -50,6 +60,11 @@ include_directories(
     thirdparty/glfw/include
     thirdparty/glm
     thirdparty/glad/include
+    thirdparty/imgui
 )
 
-add_definitions(-DGLFW_STATIC -DGLFW_INCLUDE_NONE)
+add_definitions(
+    -DGLFW_STATIC 
+    -DGLFW_INCLUDE_NONE
+    -DIMGUI_IMPL_OPENGL_LOADER_GLAD
+)

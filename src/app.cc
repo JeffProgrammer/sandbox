@@ -1,5 +1,8 @@
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
 #include "app.h"
 
 const int DEFAULT_WIDTH = 1440;
@@ -67,11 +70,24 @@ void Application::init()
 
    glfwSetWindowSizeCallback(state.window, windowCallback);
    
+   ImGui::CreateContext();
+   ImGui::StyleColorsDark();
+   ImGui_ImplGlfw_InitForOpenGL(state.window, true); // true installs callbacks automatically
+#ifdef __APPLE__
+   ImGui_ImplOpenGL3_Init("#version 410");
+#else
+   ImGui_ImplOpenGL3_Init("#version 430");
+#endif
+   
    onInit();
 }
 
 void Application::destroy()
 {
+   ImGui_ImplOpenGL3_Shutdown();
+   ImGui_ImplGlfw_Shutdown();
+   ImGui::DestroyContext();
+   
    onDestroy();
    
    glfwDestroyWindow(state.window);
@@ -99,6 +115,11 @@ bool Application::update()
    state.lastMouseY = currentY;
    
    onUpdate(deltaInMilliseconds);
+   
+   ImGui_ImplOpenGL3_NewFrame();
+   ImGui_ImplGlfw_NewFrame();
+   onRenderImGUI(deltaInMilliseconds);
+   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
    
    glfwSwapBuffers(state.window);
    

@@ -12,4 +12,5 @@ public:
    virtual void onInit() override;
    virtual void onDestroy() override;
    virtual void onUpdate(double dt) override;
+   virtual void onRenderImGUI(double dt) override;
 };

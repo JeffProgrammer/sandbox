@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <imgui.h>
 #include "apps/cube/cubeApp.h"
 
 IMPLEMENT_APPLICATION(CubeApplication);
@@ -76,11 +77,12 @@ constexpr GLchar* fragShader =
 
       getWindowSize(windowWidth, windowHeight);
       toggleCursorLock();
+      setWindowTitle("Cube App");
 
       sunData.sunDir = glm::vec4(0.32f, 0.75f, 0.54f, 0.0f);
       sunData.sunColor = glm::vec4(1.4f, 1.2f, 0.4f, 0.0f);
       sunData.ambientColor = glm::vec4(0.3f, 0.3f, 0.4f, 0.0f);
-
+      
       initGL();
    }
    
@@ -239,3 +241,17 @@ constexpr GLchar* fragShader =
 
       glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, NULL);
    }
+
+void CubeApplication::onRenderImGUI(double dt)
+{
+   ImGui::NewFrame();
+   ImGui::Begin("Debug Information");
+   ImGui::SetWindowSize(ImVec2(400, 120));
+   ImGui::Text("Frame Rate: %.1f FPS", ImGui::GetIO().Framerate);
+   ImGui::Separator();
+   ImGui::Text("GL Renderer: %s", glGetString(GL_RENDERER));
+   ImGui::Text("GL Vendor: %s", glGetString(GL_VENDOR));
+   ImGui::Text("GL Version: %s", glGetString(GL_VERSION));
+   ImGui::End();
+   ImGui::Render();
+}
