@@ -1,9 +1,14 @@
 #pragma once
 
+#include <vector>
 #include "app.h"
 
 class MainApplication : public Application
 {
+   std::vector<ApplicationRep*> apps;
+   std::vector<const char*> names;
+   int selectedIndex = 0;
+   
 public:
    DECLARE_APPLICATION(MainApplication);
 

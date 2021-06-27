@@ -75,6 +75,27 @@ public:
    std::string mName;
 
    virtual Application* create() = 0;
+   
+   static Application* get(const std::string &searchName)
+   {
+      for (ApplicationRep* rep = sLast; rep != nullptr; rep = rep->mNext)
+      {
+         if (searchName == rep->mName)
+            return rep->create();
+      }
+
+      return nullptr;
+   }
+   
+   static std::vector<ApplicationRep*> getListOfApplications()
+   {
+      std::vector<ApplicationRep *> apps;
+
+      for (ApplicationRep* rep = sLast; rep != nullptr; rep = rep->mNext)
+         apps.push_back(rep);
+
+      return apps;
+   }
 };
 
 template<typename T>
@@ -91,27 +112,6 @@ public:
    virtual Application* create() override
    {
       return static_cast<Application*>(new T());
-   }
-
-   static Application* get(const std::string &searchName)
-   {
-      for (ApplicationRep* rep = sLast; rep != nullptr; rep = rep->mNext)
-      {
-         if (searchName == rep->mName)
-            return rep->create();
-      }
-
-      return nullptr;
-   }
-
-   static std::vector<ApplicationRep*> getListOfApplications()
-   {
-      std::vector<ApplicationRep *> apps;
-
-      for (ApplicationRep* rep = sLast; rep != nullptr; rep = rep->mNext)
-         apps.push_back(rep);
-
-      return apps;
    }
 };
 

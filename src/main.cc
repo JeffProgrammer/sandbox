@@ -1,11 +1,11 @@
 #include "app.h"
-#include "apps/cube/cubeApp.h"
+#include "apps/main/mainApp.h"
 
 Application* gApplication;
 
 int main(int argc, char *argv[])
 {
-   gApplication = new CubeApplication;
+   gApplication = new MainApplication;
    gApplication->init();
    
    while (gApplication->update());
