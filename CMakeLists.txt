@@ -41,6 +41,9 @@ set(SANDBOX_SRC
 
     src/apps/cube/cubeApp.h
     src/apps/cube/cubeApp.cc
+
+    src/apps/cpuParticlesApp/cpuParticlesApp.h
+    src/apps/cpuParticlesApp/cpuParticlesApp.cc
 )
 
 add_executable(sandbox ${SANDBOX_SRC})
