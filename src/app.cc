@@ -48,6 +48,7 @@ void Application::init()
 #endif
 #endif
    
+   memset(&state, 0, sizeof(state));
    state.window = glfwCreateWindow(DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_TITLE, NULL, NULL);
    glfwMakeContextCurrent(state.window);
 
@@ -119,8 +120,9 @@ bool Application::update()
    {
       // switch apps
       destroy();
+      Application* app = state.queuedApp;
       delete gApplication;
-      gApplication = state.queuedApp;
+      gApplication = app;
       gApplication->init();
 
       return true;
