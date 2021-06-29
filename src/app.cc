@@ -6,8 +6,8 @@
 #include "app.h"
 #include "apps/main/mainApp.h"
 
-const int DEFAULT_WIDTH = 1440;
-const int DEFAULT_HEIGHT = 900;
+const int DEFAULT_WIDTH =1920;
+const int DEFAULT_HEIGHT = 1080;
 const char* DEFAULT_TITLE = "Application";
 
 #if !defined(NDEBUG) && !defined(__APPLE__)
@@ -215,6 +215,11 @@ void Application::getWindowSize(int& width, int& height) const
    glfwGetWindowSize(state.window, &width, &height);
 }
 
+void Application::setVerticalSync(bool enabled)
+{
+   state.vsyncEnabled = enabled;
+   glfwSwapInterval(enabled ? 1 : 0);
+}
 
 void Application::validateShaderCompilation(GLuint shader)
 {

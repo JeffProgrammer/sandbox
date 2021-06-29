@@ -54,8 +54,10 @@ void CpuParticlesApp::onInit()
    updatePerspectiveMatrix();
 
    getWindowSize(windowWidth, windowHeight);
-   toggleCursorLock();
    setWindowTitle("Cpu Particle App");
+
+   vsync = false;
+   freeze = false;
 
    initParticles();
 
@@ -69,9 +71,6 @@ void CpuParticlesApp::onDestroy()
 
 void CpuParticlesApp::onUpdate(double dt)
 {
-   if (isKeyPressed(Key::ESCAPE))
-      toggleCursorLock();
-
    updateCamera(dt);
 
    simulateParticles(dt);
@@ -97,13 +96,17 @@ void CpuParticlesApp::initParticles()
 void CpuParticlesApp::resetParticle(Particle& p)
 {
    p.pos = glm::vec3(0);
-   p.velocity = glm::ballRand(5.0);
+   p.velocity = glm::ballRand(3.0);
    p.lifeTime = 0.0;
    p.color = glm::vec4(1.0f);
+   p.lifeTimeMax = (PARTICLE_TIME_MAX_MS - 1000) - ((rand() % 10 + 1) * 100);
 }
 
 void CpuParticlesApp::simulateParticles(double dt)
 {
+   if (freeze)
+      return;
+
    float deltaSeconds = (float)(dt / 1000.0f);
 
    for (int i = 0; i < PARTICLE_COUNT; ++i)
@@ -112,7 +115,7 @@ void CpuParticlesApp::simulateParticles(double dt)
       p.pos += p.velocity * deltaSeconds;
       p.lifeTime += dt;
 
-      if (p.lifeTime > PARTICLE_TIME_MS)
+      if (p.lifeTime >  p.lifeTimeMax)
          resetParticle(p);
    }
 }
@@ -128,16 +131,7 @@ void CpuParticlesApp::copyParticlesToGLBuffer()
 
 void CpuParticlesApp::updateCamera(double dt)
 {
-   Move move;
-   if (isKeyPressed(Key::FORWARD))   move.y += 1.0f;
-   if (isKeyPressed(Key::BACKWARDS)) move.y -= 1.0f;
-   if (isKeyPressed(Key::RIGHT))     move.x += 1.0f;
-   if (isKeyPressed(Key::LEFT))      move.x -= 1.0f;
-
-   glm::vec2 mouse = getMouseDelta();
-   move.pitch = mouse.y;
-   move.yaw = mouse.x;
-
+   Move move = {};
    camera.update(dt, move);
    updatePerspectiveMatrix();
 }
@@ -223,9 +217,6 @@ void CpuParticlesApp::render(double dt)
    glClearColor(0.0, 0.0, 0.0, 1.0);
 
    glEnable(GL_DEPTH_TEST);
-   glEnable(GL_CULL_FACE);
-   glCullFace(GL_FRONT);
-   glFrontFace(GL_CW);
    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
    glUseProgram(shaderProgram);
@@ -254,13 +245,27 @@ void CpuParticlesApp::render(double dt)
 void CpuParticlesApp::onRenderImGUI(double dt)
 {
    ImGui::NewFrame();
-   ImGui::Begin("Debug Information");
-   ImGui::SetWindowSize(ImVec2(400, 120));
+   
+   ImGui::Begin("Debug Information & Options");
+   ImGui::SetWindowSize(ImVec2(700, 180));
    ImGui::Text("Frame Rate: %.1f FPS", ImGui::GetIO().Framerate);
    ImGui::Separator();
-   ImGui::Text("GL Renderer: %s", glGetString(GL_RENDERER));
-   ImGui::Text("GL Vendor: %s", glGetString(GL_VENDOR));
-   ImGui::Text("GL Version: %s", glGetString(GL_VERSION));
+
+   ImGui::Text("OpenGL Driver Information:");
+   ImGui::Text("   Renderer: %s", glGetString(GL_RENDERER));
+   ImGui::Text("   Vendor: %s", glGetString(GL_VENDOR));
+   ImGui::Text("   Version: %s", glGetString(GL_VERSION));
+
+   ImGui::Separator();
+
+   if (ImGui::Checkbox("Enable Vsync", &vsync))
+   {
+      setVerticalSync(vsync);
+   }
+
+   ImGui::Checkbox("Freeze Simulation", &freeze);
+
    ImGui::End();
+
    ImGui::Render();
 }

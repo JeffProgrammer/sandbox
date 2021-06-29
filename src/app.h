@@ -24,6 +24,7 @@ private:
       bool cursorIsLocked;
       Application *queuedApp;
       bool isQueued = false;
+      bool vsyncEnabled = false;
    } state;
    
 public:
@@ -47,6 +48,8 @@ public:
    glm::vec2 getMouseDelta() const;
 
    void toggleCursorLock();
+
+   void setVerticalSync(bool enabled);
 
    void setWindowTitle(const char* title);
    

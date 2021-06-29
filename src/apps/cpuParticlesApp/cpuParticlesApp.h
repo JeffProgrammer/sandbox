@@ -13,6 +13,7 @@ struct Particle
    glm::vec3 velocity;
    glm::vec4 color;
    float lifeTime;
+   float lifeTimeMax;
 };
 
 struct GLParticle
@@ -22,7 +23,7 @@ struct GLParticle
 };
 
 #define PARTICLE_COUNT (int)10000
-#define PARTICLE_TIME_MS (float)3000
+#define PARTICLE_TIME_MAX_MS (float)3000
 
 class CpuParticlesApp : public Application
 {
@@ -70,4 +71,7 @@ private:
 
    GLuint cameraUboLocation;
    GLuint uniformModelMatLocation;
+
+   bool vsync;
+   bool freeze;
 };
