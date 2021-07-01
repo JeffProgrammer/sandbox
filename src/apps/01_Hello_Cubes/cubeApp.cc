@@ -2,7 +2,7 @@
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <imgui.h>
-#include "apps/cube/cubeApp.h"
+#include "apps/01_Hello_Cubes/cubeApp.h"
 
 IMPLEMENT_APPLICATION(CubeApplication);
 

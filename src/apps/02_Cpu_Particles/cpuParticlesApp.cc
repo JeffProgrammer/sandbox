@@ -3,7 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/random.hpp>
 #include <imgui.h>
-#include "apps/cpuParticlesApp/cpuParticlesApp.h"
+#include "apps/02_Cpu_Particles/cpuParticlesApp.h"
 
 IMPLEMENT_APPLICATION(CpuParticlesApp);
 
@@ -113,7 +113,7 @@ void CpuParticlesApp::simulateParticles(double dt)
    {
       Particle& p = particles[i];
       p.pos += p.velocity * deltaSeconds;
-      p.lifeTime += dt;
+      p.lifeTime += (float)dt;
 
       if (p.lifeTime >  p.lifeTimeMax)
          resetParticle(p);

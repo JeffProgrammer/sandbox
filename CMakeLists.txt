@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.8)
 project(GraphicsSandbox)
 
 function(advanced_option_off)
@@ -6,6 +6,15 @@ function(advanced_option_off)
         option(${arg} "" OFF)
         mark_as_advanced(FORCE ${arg})
     endforeach()
+endfunction()
+
+function(add_app)
+    foreach(arg IN LISTS ARGN)
+        file(GLOB_RECURSE files_found RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "src/apps/${arg}/*.*")
+        list(APPEND apps ${files_found})
+    endforeach()
+
+    set(SANDBOX_SRC "${SANDBOX_SRC};${apps}" PARENT_SCOPE)
 endfunction()
 
 set(CMAKE_CXX_STANDARD 14)
@@ -38,17 +47,14 @@ set(SANDBOX_SRC
 
     src/apps/main/mainApp.h
     src/apps/main/mainApp.cc
-
-    src/apps/cube/cubeApp.h
-    src/apps/cube/cubeApp.cc
-
-    src/apps/cpuParticlesApp/cpuParticlesApp.h
-    src/apps/cpuParticlesApp/cpuParticlesApp.cc
 )
+
+add_app(01_Hello_Cubes 02_Cpu_Particles)
 
 add_executable(sandbox ${SANDBOX_SRC})
 target_link_libraries(sandbox glfw glad imgui)
 target_include_directories(sandbox PRIVATE src)
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${SANDBOX_SRC})
 
 # OpenGL Library
 if (APPLE)
