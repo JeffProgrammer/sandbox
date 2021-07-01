@@ -40,6 +40,7 @@ add_library(imgui
 set(SANDBOX_SRC
     src/core/camera.h
     src/core/camera.cc
+    src/core/cube.h
 
     src/app.h
     src/app.cc
@@ -49,7 +50,7 @@ set(SANDBOX_SRC
     src/apps/main/mainApp.cc
 )
 
-add_app(01_Hello_Cubes 02_Cpu_Particles)
+add_app(01_Hello_Cubes 02_Cpu_Particles 03_Draw_Performance)
 
 add_executable(sandbox ${SANDBOX_SRC})
 target_link_libraries(sandbox glfw glad imgui)
