@@ -3,7 +3,7 @@
 
 in vec3 fPOSITION;
 in vec3 fNORMAL;
-in flat int fINSTANCE_ID;
+flat in int fINSTANCE_ID;
 layout(location = 0) out vec4 color;
 
 vec4 ambient_color = vec4(0.3, 0.3, 0.3, 1.0);
@@ -39,7 +39,7 @@ void main() {
 
       float attenuation = 1.0 / (1.0 + lights[i].radius * (lightLen * lightLen));
 
-      lightColor += ambient_color + attenuation * vec4(lights[i].color * angle);
+      lightColor += attenuation * vec4(lights[i].color * angle);
    }
 
    color = lightColor + ambient_color;

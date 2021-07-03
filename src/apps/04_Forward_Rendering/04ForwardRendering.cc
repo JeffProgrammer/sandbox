@@ -109,7 +109,7 @@ void ForwardRenderingApplication::createLights(int count)
       pos.y += 5.0f;
       lightData.lights[i].position = glm::vec3(pos);
       lightData.lights[i].radius = 3.0f;
-      lightData.lights[i].color = glm::vec4(glm::rgbColor(glm::vec3(rand()/(float)RAND_MAX*360.0f, 1.0f, 0.2f)), 1.0);
+      lightData.lights[i].color = glm::vec4(glm::rgbColor(glm::vec3(((float)rand()/(float)RAND_MAX)*360.0f, 1.0f, 0.2f)), 1.0);
    }
 
    glBindBuffer(GL_UNIFORM_BUFFER, lightUbo);

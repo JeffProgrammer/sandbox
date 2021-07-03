@@ -5,7 +5,7 @@ layout(location = 1) in vec3 normal;
 
 out vec3 fPOSITION;
 out vec3 fNORMAL;
-out int fINSTANCE_ID;
+flat out int fINSTANCE_ID;
 
 layout(std140) uniform CameraBuffer {
    mat4 proj;
