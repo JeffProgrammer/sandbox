@@ -63,6 +63,7 @@ void ForwardRenderingApplication::initGL()
    glGenBuffers(1, &vbo);
    glBindBuffer(GL_ARRAY_BUFFER, vbo);
    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertsBuffer), cubeVertsBuffer, GL_STATIC_DRAW);
+   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
    glEnableVertexAttribArray(0);
    glEnableVertexAttribArray(1);
@@ -72,6 +73,11 @@ void ForwardRenderingApplication::initGL()
    glGenBuffers(1, &ibo);
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
+
+   glGenBuffers(1, &groundVbo);
+   glBindBuffer(GL_ARRAY_BUFFER, groundVbo);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertsBuffer), groundVertsBuffer, GL_STATIC_DRAW);
+   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
    initShader();
    initUBOs();
@@ -123,6 +129,8 @@ void ForwardRenderingApplication::initShader()
    char* vertShader = readShaderFile("apps/04_Forward_Rendering/shaders/cube.vert");
    char* fragShader = readShaderFile("apps/04_Forward_Rendering/shaders/cube.frag");
 
+   char* vertGroundShader = readShaderFile("apps/04_Forward_Rendering/shaders/ground.vert");
+
    GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
    glShaderSource(vShader, 1, &vertShader, NULL);
    glCompileShader(vShader);
@@ -143,12 +151,37 @@ void ForwardRenderingApplication::initShader()
    glDeleteShader(fShader);
    validateShaderLinkCompilation(shaderProgram);
 
+   // ground shader
+   vShader = glCreateShader(GL_VERTEX_SHADER);
+   glShaderSource(vShader, 1, &vertGroundShader, NULL);
+   glCompileShader(vShader);
+   validateShaderCompilation(vShader);
+
+   fShader = glCreateShader(GL_FRAGMENT_SHADER);
+   glShaderSource(fShader, 1, &fragShader, NULL);
+   glCompileShader(fShader);
+   validateShaderCompilation(fShader);
+
+   groundShaderProgram = glCreateProgram();
+   glAttachShader(groundShaderProgram, vShader);
+   glAttachShader(groundShaderProgram, fShader);
+   glLinkProgram(groundShaderProgram);
+   glDetachShader(groundShaderProgram, vShader);
+   glDetachShader(groundShaderProgram, fShader);
+   glDeleteShader(vShader);
+   glDeleteShader(fShader);
+   validateShaderLinkCompilation(groundShaderProgram);
+
    free(vertShader);
+   free(vertGroundShader);
    free(fragShader);
 
-   uniformCameraLocationBlock = glGetUniformBlockIndex(shaderProgram, "CameraBuffer");
-   uniformLightLocationBlock = glGetUniformBlockIndex(shaderProgram, "LightBuffer");
-   uniformCubeLocationBlock = glGetUniformBlockIndex(shaderProgram, "CubeInstanceBuffer");
+   GLuint uniformCameraLocationBlock = glGetUniformBlockIndex(shaderProgram, "CameraBuffer");
+   GLuint uniformLightLocationBlock = glGetUniformBlockIndex(shaderProgram, "LightBuffer");
+   GLuint uniformCubeLocationBlock = glGetUniformBlockIndex(shaderProgram, "CubeInstanceBuffer");
+
+   GLuint uniformCameraLocationBlockGROUND = glGetUniformBlockIndex(groundShaderProgram, "CameraBuffer");
+   GLuint uniformLightLocationBlockGROUND = glGetUniformBlockIndex(groundShaderProgram, "LightBuffer");
 
    cameraUboLocation = 0;
    lightUboLocation = 1;
@@ -157,15 +190,19 @@ void ForwardRenderingApplication::initShader()
    glUniformBlockBinding(shaderProgram, uniformCameraLocationBlock, cameraUboLocation);
    glUniformBlockBinding(shaderProgram, uniformLightLocationBlock, lightUboLocation);
    glUniformBlockBinding(shaderProgram, uniformCubeLocationBlock, cubeUboLocation);
+
+   glUniformBlockBinding(groundShaderProgram, uniformCameraLocationBlockGROUND, cameraUboLocation);
+   glUniformBlockBinding(groundShaderProgram, uniformLightLocationBlockGROUND, lightUboLocation);
 }
 
 void ForwardRenderingApplication::destroyGL()
 {
    glUseProgram(0);
    glDeleteProgram(shaderProgram);
+   glDeleteProgram(groundShaderProgram);
 
-   GLuint deleteBuffers[5] = { vbo, ibo, cameraUbo, lightUbo, cubeUbo };
-   glDeleteBuffers(5, deleteBuffers);
+   GLuint deleteBuffers[6] = { vbo, ibo, cameraUbo, lightUbo, cubeUbo, groundVbo };
+   glDeleteBuffers(6, deleteBuffers);
 
    glBindVertexArray(0);
    glDeleteVertexArrays(1, &vao);
@@ -182,20 +219,27 @@ void ForwardRenderingApplication::render(double dt)
    glCullFace(GL_FRONT);
    glFrontFace(GL_CW);
 
-   glUseProgram(shaderProgram);
+   //glBindVertexArray(vao);
 
    glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
 
-   glBindVertexArray(vao);
-   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+   // Draw Ground
+   glUseProgram(groundShaderProgram);
+   glBindBuffer(GL_ARRAY_BUFFER, groundVbo);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
    glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
    glBindBufferBase(GL_UNIFORM_BUFFER, lightUboLocation, lightUbo);
    glBindBufferBase(GL_UNIFORM_BUFFER, cubeUboLocation, cubeUbo);
 
-   glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, NULL, CUBE_COUNT);
+   glDrawArrays(GL_TRIANGLES, 0, 6);
+
+   // Draw Cubes
+   //glUseProgram(shaderProgram);
+   //glBindBuffer(GL_ARRAY_BUFFER, vbo);
+   //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+   //glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, NULL, CUBE_COUNT);
 }
 
 void ForwardRenderingApplication::onRenderImGUI(double dt)

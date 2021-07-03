@@ -64,6 +64,7 @@ private:
    int windowHeight;
 
    GLuint shaderProgram;
+   GLuint groundShaderProgram;
 
    GLuint vbo;
    GLuint ibo;
@@ -72,9 +73,7 @@ private:
    GLuint lightUbo;
    GLuint cubeUbo;
 
-   GLuint uniformCameraLocationBlock;
-   GLuint uniformCubeLocationBlock;
-   GLuint uniformLightLocationBlock;
+   GLuint groundVbo;
 
    GLuint cameraUboLocation;
    GLuint cubeUboLocation;
