@@ -23,6 +23,8 @@ The eventual plan is to have a modern, multithreaded command buffer and graphics
     Renders 10,000 point particles, updating from the cpu to the gpu every frame.
 - **03 Draw Performance**
     Stresses drawcalls by rendering a cube per drawcall.
+- **04 Forward Rendering**
+    Renders up to 64 lights in forward rendering.
 
 ## License
 ```
