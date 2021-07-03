@@ -57,6 +57,6 @@ void main()
       lightColor += computePointLight(light, fPOSITION, normal);
    }
 
-   //color = vec4(lightColor.xyz + ambient_color, 1.0);
-   color = vec4(1.0, 0.0, 0.0, 0.0); //vec4(normal, 1.0);
+   color = vec4(lightColor.xyz + ambient_color, 1.0);
+   //color = vec4(1.0, 0.0, 0.0, 0.0); //vec4(normal, 1.0);
 }
