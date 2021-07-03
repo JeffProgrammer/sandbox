@@ -1,4 +1,4 @@
-#define LIGHT_COUNT 64
+#define LIGHT_COUNT 512
 
 in vec3 fPOSITION;
 in vec3 fNORMAL;
@@ -34,7 +34,7 @@ vec4 computePointLight(Light light, vec3 position, vec3 normal)
    vec4 result = vec4(0.0);
    if (lightLen < radius)
    {
-      float angle = dot(normal, -normalize(lightVec));
+      float angle = dot(normal, normalize(lightVec));
       angle = clamp(angle, 0.0, 1.0);
 
       float attenuation = calcAttenuationFactor(light.attenuation.x, light.attenuation.y, light.attenuation.z, lightLen);

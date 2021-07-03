@@ -9,8 +9,8 @@ struct CameraUbo
    glm::mat4 viewMatrix;
 };
 
-#define CUBE_COUNT 64
-#define LIGHT_COUNT 64
+#define CUBE_COUNT 512
+#define LIGHT_COUNT 512
 
 struct CubeUbo
 {

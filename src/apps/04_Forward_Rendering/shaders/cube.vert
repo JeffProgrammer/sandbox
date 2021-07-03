@@ -1,4 +1,4 @@
-#define CUBE_COUNT 64
+#define CUBE_COUNT 512
 
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 normal;
