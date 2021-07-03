@@ -9,49 +9,6 @@ IMPLEMENT_APPLICATION(DrawPerformanceApplication);
 
 const float VIEW_DISTANCE = 500.0f;
 
-constexpr GLchar* vertShader =
-#ifdef __APPLE__
-"#version 410\n"
-#else
-"#version 430\n"
-#endif
-"layout(location = 0) in vec3 pos;\n"
-"layout(location = 1) in vec3 normal;\n"
-"\n"
-"out vec3 fNORMAL;\n"
-"\n"
-"layout(std140) uniform CameraBuffer {\n"
-"   mat4 proj;\n"
-"   mat4 view;\n"
-"} camera;\n"
-"\n"
-"uniform mat4 modelMatrix;\n"
-"\n"
-"void main() {\n"
-"   fNORMAL = normal;\n"
-"   gl_Position = camera.proj * camera.view * modelMatrix * vec4(pos, 1.0);\n"
-"}";
-
-constexpr GLchar* fragShader =
-#ifdef __APPLE__
-"#version 410\n"
-#else
-"#version 430\n"
-#endif
-"in vec3 fNORMAL;\n"
-"layout(location = 0) out vec4 color;\n"
-"\n"
-"layout(std140) uniform SunBuffer {\n"
-"   vec4 sun_dir;\n"
-"   vec4 sun_color;\n"
-"   vec4 ambient_color;\n"
-"} light;\n"
-"\n"
-"void main() {\n"
-"   float nL = clamp(dot(fNORMAL, vec3(light.sun_dir)), 0.0, 1.0);\n"
-"   color = light.sun_color * nL + light.ambient_color;\n"
-"}";
-
 void DrawPerformanceApplication::onInit()
 {
    camera.setPosition(glm::vec3(18.0f, 50.0f, 18.5f));
@@ -138,6 +95,9 @@ void DrawPerformanceApplication::initUBOs()
 
 void DrawPerformanceApplication::initShader()
 {
+   char* vertShader = readShaderFile("apps/03_Draw_Performance/shaders/cube.vert");
+   char* fragShader = readShaderFile("apps/03_Draw_Performance/shaders/cube.frag");
+
    GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
    glShaderSource(vShader, 1, &vertShader, NULL);
    glCompileShader(vShader);
@@ -157,6 +117,9 @@ void DrawPerformanceApplication::initShader()
    glDeleteShader(vShader);
    glDeleteShader(fShader);
    validateShaderLinkCompilation(shaderProgram);
+
+   free(vertShader);
+   free(fragShader);
 
    uniformModelMatLocation = glGetUniformLocation(shaderProgram, "modelMatrix");
    uniformSunLocationBlock = glGetUniformBlockIndex(shaderProgram, "SunBuffer");

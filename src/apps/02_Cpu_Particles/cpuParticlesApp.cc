@@ -9,44 +9,6 @@ IMPLEMENT_APPLICATION(CpuParticlesApp);
 
 const float VIEW_DISTANCE = 500.0f;
 
-constexpr GLchar* vertShader =
-#ifdef __APPLE__
-"#version 410\n"
-#else
-"#version 430\n"
-#endif
-"layout(location = 0) in vec3 pos;\n"
-"layout(location = 1) in vec4 color;\n"
-"\n"
-"out vec4 fCOLOR;\n"
-"\n"
-"layout(std140) uniform CameraBuffer {\n"
-"   mat4 proj;\n"
-"   mat4 view;\n"
-"} camera;\n"
-"\n"
-"uniform mat4 modelMatrix;\n"
-"\n"
-"void main() {\n"
-"   fCOLOR = color;\n"
-"   gl_PointSize = 5.0;\n"
-"   gl_Position = camera.proj * camera.view * modelMatrix * vec4(pos, 1.0);\n"
-"}";
-
-constexpr GLchar* fragShader =
-#ifdef __APPLE__
-"#version 410\n"
-#else
-"#version 430\n"
-#endif
-"in vec4 fCOLOR;\n"
-"layout(location = 0) out vec4 color;\n"
-"\n"
-"void main() {\n"
-"   color = fCOLOR;\n"
-"}";
-
-
 void CpuParticlesApp::onInit()
 {
    camera.setPosition(glm::vec3(1.8f, 2.0f, 1.85f));
@@ -98,7 +60,7 @@ void CpuParticlesApp::resetParticle(Particle& p)
    p.pos = glm::vec3(0);
    p.velocity = glm::ballRand(3.0);
    p.lifeTime = 0.0;
-   p.color = glm::vec4(1.0f);
+   p.color = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f);
    p.lifeTimeMax = (PARTICLE_TIME_MAX_MS - 1000) - ((rand() % 10 + 1) * 100);
 }
 
@@ -170,6 +132,9 @@ void CpuParticlesApp::initUBOs()
 
 void CpuParticlesApp::initShader()
 {
+   char* vertShader = readShaderFile("apps/02_Cpu_Particles/shaders/particles.vert");
+   char* fragShader = readShaderFile("apps/02_Cpu_Particles/shaders/particles.frag");
+
    GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
    glShaderSource(vShader, 1, &vertShader, NULL);
    glCompileShader(vShader);
@@ -189,6 +154,9 @@ void CpuParticlesApp::initShader()
    glDeleteShader(vShader);
    glDeleteShader(fShader);
    validateShaderLinkCompilation(shaderProgram);
+
+   free(vertShader);
+   free(fragShader);
 
    uniformModelMatLocation = glGetUniformLocation(shaderProgram, "modelMatrix");
    uniformCameraLocationBlock = glGetUniformBlockIndex(shaderProgram, "CameraBuffer");

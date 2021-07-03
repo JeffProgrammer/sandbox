@@ -14,6 +14,12 @@ const char* DEFAULT_TITLE = "Application";
 #define OPENGL_DEBUG
 #endif
 
+#ifdef __APPLE__
+#define SHADER_VERSION "#version 410\n"
+#else
+#define SHADER_VERSION "#version 430\n"
+#endif
+
 extern Application* gApplication;
 
 ApplicationRep* ApplicationRep::sLast = nullptr;
@@ -77,11 +83,7 @@ void Application::init()
    ImGui::CreateContext();
    ImGui::StyleColorsDark();
    ImGui_ImplGlfw_InitForOpenGL(state.window, true); // true installs callbacks automatically
-#ifdef __APPLE__
-   ImGui_ImplOpenGL3_Init("#version 410");
-#else
-   ImGui_ImplOpenGL3_Init("#version 430");
-#endif
+   ImGui_ImplOpenGL3_Init(SHADER_VERSION);
    
    onInit();
 }
@@ -262,6 +264,32 @@ void Application::queueAppSwitch(const std::string &app)
    state.queuedApp = ApplicationRep::create(app);
    state.isQueued = true;
 }
+
+#pragma warning(push)
+#pragma warning(disable: 6387) // buffer possibly empty
+#pragma warning(disable: 4996) // unsafe functions
+char* Application::readShaderFile(const char* fileName) const
+{
+   FILE* file = fopen(fileName, "r");
+   if (!file)
+      abort();
+
+   static size_t shaderLen = strlen(SHADER_VERSION);
+
+   fseek(file, 0, SEEK_END);
+   long fileLen = ftell(file);
+   fseek(file, 0, SEEK_SET);
+
+
+   char* buffer = (char*)calloc(fileLen + shaderLen, sizeof(char));
+   strncpy(buffer, SHADER_VERSION, shaderLen);
+   fread(buffer + shaderLen, sizeof(char), fileLen, file);
+      
+   fclose(file);
+
+   return buffer;
+}
+#pragma warning(pop)
 
 void checkErrors(const char* fileName, int lineNumber)
 {

@@ -57,6 +57,11 @@ target_link_libraries(sandbox glfw glad imgui)
 target_include_directories(sandbox PRIVATE src)
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${SANDBOX_SRC})
 
+if (MSVC)
+    set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT sandbox)
+    set_property(TARGET sandbox PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/src/")
+endif()
+
 # OpenGL Library
 if (APPLE)
     target_link_libraries(sandbox "-framework OpenGL")

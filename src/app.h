@@ -67,6 +67,8 @@ public:
    
    void queueAppSwitch(const std::string &app);
 
+   char* readShaderFile(const char* fileName) const;
+
 protected:
    virtual void onInit() = 0;
    virtual void onDestroy() = 0;
