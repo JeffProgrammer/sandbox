@@ -50,7 +50,7 @@ set(SANDBOX_SRC
     src/apps/main/mainApp.cc
 )
 
-add_app(01_Hello_Cubes 02_Cpu_Particles 03_Draw_Performance)
+add_app(01_Hello_Cubes 02_Cpu_Particles 03_Draw_Performance 04_Forward_Rendering)
 
 add_executable(sandbox ${SANDBOX_SRC})
 target_link_libraries(sandbox glfw glad imgui)
