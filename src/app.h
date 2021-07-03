@@ -28,6 +28,8 @@ private:
    } state;
    
 public:
+   virtual ~Application() {}
+
    enum Key : int
    {
       FORWARD = 0,

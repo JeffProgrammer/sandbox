@@ -5,23 +5,27 @@ layout(location = 1) in vec3 normal;
 
 out vec3 fPOSITION;
 out vec3 fNORMAL;
-flat out int fINSTANCE_ID;
 
-layout(std140) uniform CameraBuffer {
+layout(std140) uniform CameraBuffer 
+{
    mat4 proj;
    mat4 view;
-} camera;
+};
 
-layout(std140) uniform CubeInstanceBuffer {
+layout(std140) uniform CubeInstanceBuffer 
+{
     mat4 modelMatrix[CUBE_COUNT];
-} buff;
+};
 
-void main() {
-   mat4 modelMatrix = buff.modelMatrix[gl_InstanceID];
+void main() 
+{
+   mat4 modelMat = modelMatrix[gl_InstanceID];
+   mat4 mvp = proj * view * modelMat;
 
-   fNORMAL = normal;
-   fPOSITION = vec3(modelMatrix * vec4(pos, 1.0));
-   fINSTANCE_ID = gl_InstanceID;
+   mat3 inverseModel = mat3(inverse(transpose(modelMat)));
 
-   gl_Position = camera.proj * camera.view * modelMatrix * vec4(pos, 1.0);
+   fNORMAL = (inverseModel * normal);
+   fPOSITION = vec3(modelMat * vec4(pos, 1.0));
+
+   gl_Position = mvp * vec4(pos, 1.0);
 }

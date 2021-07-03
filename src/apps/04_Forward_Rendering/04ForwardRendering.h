@@ -21,13 +21,14 @@ struct LightUbo
 {
    struct Light
    {
-      glm::vec3 position;
-      float radius;
+      glm::vec4 position;
+      glm::vec4 attenuation;
       glm::vec4 color;
    };
    
-   int lightCount;
    Light lights[LIGHT_COUNT];
+   int lightCount;
+   int pad[3];
 };
 
 class ForwardRenderingApplication : public Application

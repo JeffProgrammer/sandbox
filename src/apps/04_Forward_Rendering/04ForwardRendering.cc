@@ -105,11 +105,13 @@ void ForwardRenderingApplication::createLights(int count)
 
    for (int i = 0; i < count; i++)
    {
-      glm::vec4 pos = cubeData.modelMatrix[i][3];
-      pos.y += 5.0f;
-      lightData.lights[i].position = glm::vec3(pos);
-      lightData.lights[i].radius = 3.0f;
+      const glm::mat4 &modelMatrix = cubeData.modelMatrix[i];
+      glm::vec4 pos = modelMatrix[3];
+      pos.y = 10.0f;
+      pos.w = 16.0f;
+      lightData.lights[i].position = pos;
       lightData.lights[i].color = glm::vec4(glm::rgbColor(glm::vec3(((float)rand()/(float)RAND_MAX)*360.0f, 1.0f, 0.2f)), 1.0);
+      lightData.lights[i].attenuation = glm::vec4(1.0f, 0.7f, 5.8f, 0.0f);
    }
 
    glBindBuffer(GL_UNIFORM_BUFFER, lightUbo);
@@ -235,9 +237,14 @@ void ForwardRenderingApplication::createCubeData()
    {
       for (int z = -gridSize / 2; z < gridSize / 2; z++)
       {
-         glm::mat4 mat = glm::translate(glm::mat4(1.0), glm::vec3(x * 4, 0, z * 4));
+         glm::vec3 pos = glm::vec3((float)x * 4, 0, (float)z * 4);
+
+         glm::mat4 mat = glm::mat4(1);
+         mat = glm::translate(mat, pos);
          mat = glm::scale(mat, glm::vec3(2));
          cubeData.modelMatrix[idx++] = mat;
+
+         printf("Cube Pos[%d]: %f %f %f\n", idx - 1, pos.x, pos.y, pos.z);
       }
    }
 }
