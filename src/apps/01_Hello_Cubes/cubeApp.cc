@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include "apps/01_Hello_Cubes/cubeApp.h"
 #include "core/cube.h"
+#include "gl/shader.h"
 
 IMPLEMENT_APPLICATION(CubeApplication);
 
@@ -107,25 +108,7 @@ void CubeApplication::initShader()
    char* vertShader = readShaderFile("apps/01_Hello_Cubes/shaders/cube.vert");
    char* fragShader = readShaderFile("apps/01_Hello_Cubes/shaders/cube.frag");
 
-   GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
-   glShaderSource(vShader, 1, &vertShader, NULL);
-   glCompileShader(vShader);
-   validateShaderCompilation(vShader);
-
-   GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
-   glShaderSource(fShader, 1, &fragShader, NULL);
-   glCompileShader(fShader);
-   validateShaderCompilation(fShader);
-
-   shaderProgram = glCreateProgram();
-   glAttachShader(shaderProgram, vShader);
-   glAttachShader(shaderProgram, fShader);
-   glLinkProgram(shaderProgram);
-   glDetachShader(shaderProgram, vShader);
-   glDetachShader(shaderProgram, fShader);
-   glDeleteShader(vShader);
-   glDeleteShader(fShader);
-   validateShaderLinkCompilation(shaderProgram);
+   shaderProgram = createVertexAndFragmentShaderProgram(vertShader, fragShader);
 
    free(vertShader);
    free(fragShader);

@@ -7,8 +7,6 @@
 
 struct GLFWwindow;
 
-typedef uint32_t GLuint;
-
 class Application
 {
 private:
@@ -60,10 +58,6 @@ public:
    float getAspectRatio() const;
 
    void getWindowSize(int& width, int& height) const;
-   
-   void validateShaderCompilation(GLuint shader);
-
-   void validateShaderLinkCompilation(GLuint program);
 
    virtual void onWindowSizeUpdate(int width, int height) = 0;
    
@@ -131,11 +125,3 @@ public:
 
 #define IMPLEMENT_APPLICATION(klass) \
    ConcreteApplicationRep<klass> klass::sConcreteClassRep(#klass)
-
-#ifndef NDEBUG
-#define GL_CHECKERRORS() checkErrors(__FILE__, __LINE__)
-#else
-#define GL_CHECKERRORS()
-#endif
-
-void checkErrors(const char* fileName, int lineNumber);

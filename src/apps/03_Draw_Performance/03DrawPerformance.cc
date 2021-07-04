@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include "apps/03_Draw_Performance/03DrawPerformance.h"
 #include "core/cube.h"
+#include "gl/shader.h"
 
 IMPLEMENT_APPLICATION(DrawPerformanceApplication);
 
@@ -98,25 +99,7 @@ void DrawPerformanceApplication::initShader()
    char* vertShader = readShaderFile("apps/03_Draw_Performance/shaders/cube.vert");
    char* fragShader = readShaderFile("apps/03_Draw_Performance/shaders/cube.frag");
 
-   GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
-   glShaderSource(vShader, 1, &vertShader, NULL);
-   glCompileShader(vShader);
-   validateShaderCompilation(vShader);
-
-   GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
-   glShaderSource(fShader, 1, &fragShader, NULL);
-   glCompileShader(fShader);
-   validateShaderCompilation(fShader);
-
-   shaderProgram = glCreateProgram();
-   glAttachShader(shaderProgram, vShader);
-   glAttachShader(shaderProgram, fShader);
-   glLinkProgram(shaderProgram);
-   glDetachShader(shaderProgram, vShader);
-   glDetachShader(shaderProgram, fShader);
-   glDeleteShader(vShader);
-   glDeleteShader(fShader);
-   validateShaderLinkCompilation(shaderProgram);
+   shaderProgram = createVertexAndFragmentShaderProgram(vertShader, fragShader);
 
    free(vertShader);
    free(fragShader);

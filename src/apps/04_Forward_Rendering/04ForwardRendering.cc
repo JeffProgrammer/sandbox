@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include "apps/04_Forward_Rendering/04ForwardRendering.h"
 #include "core/cube.h"
+#include "gl/shader.h"
 
 IMPLEMENT_APPLICATION(ForwardRenderingApplication);
 
@@ -75,7 +76,7 @@ void ForwardRenderingApplication::initGL()
 
    initShader();
    initUBOs();
-   createLights(8);
+   createLights(LIGHT_COUNT);
 }
 
 void ForwardRenderingApplication::initUBOs()
@@ -123,25 +124,7 @@ void ForwardRenderingApplication::initShader()
    char* vertShader = readShaderFile("apps/04_Forward_Rendering/shaders/cube.vert");
    char* fragShader = readShaderFile("apps/04_Forward_Rendering/shaders/cube.frag");
 
-   GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
-   glShaderSource(vShader, 1, &vertShader, NULL);
-   glCompileShader(vShader);
-   validateShaderCompilation(vShader);
-
-   GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
-   glShaderSource(fShader, 1, &fragShader, NULL);
-   glCompileShader(fShader);
-   validateShaderCompilation(fShader);
-
-   shaderProgram = glCreateProgram();
-   glAttachShader(shaderProgram, vShader);
-   glAttachShader(shaderProgram, fShader);
-   glLinkProgram(shaderProgram);
-   glDetachShader(shaderProgram, vShader);
-   glDetachShader(shaderProgram, fShader);
-   glDeleteShader(vShader);
-   glDeleteShader(fShader);
-   validateShaderLinkCompilation(shaderProgram);
+   shaderProgram = createVertexAndFragmentShaderProgram(vertShader, fragShader);
 
    free(vertShader);
    free(fragShader);
@@ -217,12 +200,6 @@ void ForwardRenderingApplication::onRenderImGUI(double dt)
       createLights(lightData.lightCount);
    }
 
-   for (int i = 0; i < lightData.lightCount; i++)
-   {
-      glm::vec4 color = lightData.lights[i].color;
-      glm::vec3 pos = lightData.lights[i].position;
-      ImGui::Text("Light[%d] Position(%f, %f, %f) Color (%f, %f, %f)", i, pos.x, pos.y, pos.z, color.x, color.y, color.z);
-   }
 
    ImGui::End();
    ImGui::Render();
@@ -243,8 +220,6 @@ void ForwardRenderingApplication::createCubeData()
          mat = glm::translate(mat, pos);
          mat = glm::scale(mat, glm::vec3(2));
          cubeData.modelMatrix[idx++] = mat;
-
-         printf("Cube Pos[%d]: %f %f %f\n", idx - 1, pos.x, pos.y, pos.z);
       }
    }
 }

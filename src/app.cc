@@ -223,42 +223,6 @@ void Application::setVerticalSync(bool enabled)
    glfwSwapInterval(enabled ? 1 : 0);
 }
 
-void Application::validateShaderCompilation(GLuint shader)
-{
-   GLint status;
-   glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-   if (!status)
-   {
-      GLint len;
-      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
-
-      GLchar* log = new GLchar[len];
-      glGetShaderInfoLog(shader, len, NULL, log);
-
-      printf("OpenGL Shader Compiler Error: %s\n", log);
-      delete[] log;
-      abort();
-   }
-}
-
-void Application::validateShaderLinkCompilation(GLuint program)
-{
-   GLint status;
-   glGetProgramiv(program, GL_LINK_STATUS, &status);
-   if (!status)
-   {
-      GLint len;
-      glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
-
-      GLchar* log = new GLchar[len];
-      glGetProgramInfoLog(program, len, NULL, log);
-
-      printf("OpenGL Shader Linking Error: %s\n", log);
-      delete[] log;
-      abort();
-   }
-}
-
 void Application::queueAppSwitch(const std::string &app)
 {
    state.queuedApp = ApplicationRep::create(app);
@@ -290,26 +254,3 @@ char* Application::readShaderFile(const char* fileName) const
    return buffer;
 }
 #pragma warning(pop)
-
-void checkErrors(const char* fileName, int lineNumber)
-{
-   GLenum error = GL_NO_ERROR;
-   while ((error = glGetError()) != GL_NO_ERROR)
-   {
-      printf("//--------------------------------------------------------\n");
-      printf("OpenGL Error:\n");
-      switch (error) {
-      case 0x500: printf("Code: Invalid Enum\n"); break;
-      case 0x501: printf("Code: Invalid Value\n"); break;
-      case 0x502: printf("Code: Invalid Operation\n"); break;
-      case 0x503: printf("Code: Stack Overflow\n"); break;
-      case 0x504: printf("Code: Stack Underflow\n"); break;
-      case 0x505: printf("Code: Out of Memory\n"); break;
-      case 0x506: printf("Code: Invalid Framebuffer Operation\n"); break;
-      default:    printf("Code: Unkown\n\n"); break;
-      }
-      printf("File: %s\n", fileName);
-      printf("Line Number: %d\n", lineNumber);
-      printf("//--------------------------------------------------------\n");
-   }
-}

@@ -4,6 +4,7 @@
 #include <glm/gtc/random.hpp>
 #include <imgui.h>
 #include "apps/02_Cpu_Particles/cpuParticlesApp.h"
+#include "gl/shader.h"
 
 IMPLEMENT_APPLICATION(CpuParticlesApp);
 
@@ -135,25 +136,7 @@ void CpuParticlesApp::initShader()
    char* vertShader = readShaderFile("apps/02_Cpu_Particles/shaders/particles.vert");
    char* fragShader = readShaderFile("apps/02_Cpu_Particles/shaders/particles.frag");
 
-   GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
-   glShaderSource(vShader, 1, &vertShader, NULL);
-   glCompileShader(vShader);
-   validateShaderCompilation(vShader);
-
-   GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
-   glShaderSource(fShader, 1, &fragShader, NULL);
-   glCompileShader(fShader);
-   validateShaderCompilation(fShader);
-
-   shaderProgram = glCreateProgram();
-   glAttachShader(shaderProgram, vShader);
-   glAttachShader(shaderProgram, fShader);
-   glLinkProgram(shaderProgram);
-   glDetachShader(shaderProgram, vShader);
-   glDetachShader(shaderProgram, fShader);
-   glDeleteShader(vShader);
-   glDeleteShader(fShader);
-   validateShaderLinkCompilation(shaderProgram);
+   shaderProgram = createVertexAndFragmentShaderProgram(vertShader, fragShader);
 
    free(vertShader);
    free(fragShader);

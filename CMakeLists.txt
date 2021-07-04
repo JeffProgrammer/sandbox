@@ -42,6 +42,9 @@ set(SANDBOX_SRC
     src/core/camera.cc
     src/core/cube.h
 
+    src/gl/shader.h
+    src/gl/shader.cc
+
     src/app.h
     src/app.cc
     src/main.cc
