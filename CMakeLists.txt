@@ -42,6 +42,8 @@ set(SANDBOX_SRC
     src/core/camera.cc
     src/core/cube.h
 
+    src/gl/gpuProfiler.h
+    src/gl/gpuProfiler.cc
     src/gl/shader.h
     src/gl/shader.cc
 

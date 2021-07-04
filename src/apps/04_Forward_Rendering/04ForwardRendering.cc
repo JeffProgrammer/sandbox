@@ -74,6 +74,8 @@ void ForwardRenderingApplication::initGL()
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
 
+   profiler.init();
+
    initShader();
    initUBOs();
    createLights(LIGHT_COUNT);
@@ -150,12 +152,16 @@ void ForwardRenderingApplication::destroyGL()
    GLuint deleteBuffers[5] = { vbo, ibo, cameraUbo, lightUbo, cubeUbo };
    glDeleteBuffers(5, deleteBuffers);
 
+   profiler.destroy();
+
    glBindVertexArray(0);
    glDeleteVertexArrays(1, &vao);
 }
 
 void ForwardRenderingApplication::render(double dt)
 {
+   profiler.begin();
+
    glViewport(0, 0, windowWidth, windowHeight);
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -179,6 +185,8 @@ void ForwardRenderingApplication::render(double dt)
    glBindBufferBase(GL_UNIFORM_BUFFER, cubeUboLocation, cubeUbo);
 
    glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, NULL, CUBE_COUNT);
+
+   gpuTime = profiler.end();
 }
 
 void ForwardRenderingApplication::onRenderImGUI(double dt)
@@ -186,7 +194,7 @@ void ForwardRenderingApplication::onRenderImGUI(double dt)
    ImGui::NewFrame();
    ImGui::Begin("Debug Information & Options");
    //ImGui::SetWindowSize(ImVec2(700, 180));
-   ImGui::Text("Frame Rate: %.1f FPS", ImGui::GetIO().Framerate);
+   ImGui::Text("Frame Rate: %.1f FPS Gpu Time: %.2fms", ImGui::GetIO().Framerate, gpuTime);
    ImGui::Separator();
 
    ImGui::Text("OpenGL Driver Information:");

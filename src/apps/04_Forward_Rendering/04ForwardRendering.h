@@ -2,6 +2,7 @@
 
 #include "app.h"
 #include "core/camera.h"
+#include "gl/gpuProfiler.h"
 
 struct CameraUbo
 {
@@ -55,6 +56,8 @@ public:
 
 private:
    Camera camera;
+   GpuProfiler profiler;
+   float gpuTime;
 
    CameraUbo cameraData;
    CubeUbo cubeData;
