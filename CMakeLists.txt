@@ -41,6 +41,7 @@ set(SANDBOX_SRC
     src/core/camera.h
     src/core/camera.cc
     src/core/cube.h
+    src/core/groundplane.h
 
     src/gl/gpuProfiler.h
     src/gl/gpuProfiler.cc
@@ -55,7 +56,13 @@ set(SANDBOX_SRC
     src/apps/main/mainApp.cc
 )
 
-add_app(01_Hello_Cubes 02_Cpu_Particles 03_Draw_Performance 04_Forward_Rendering)
+add_app(
+    01_Hello_Cubes 
+    02_Cpu_Particles 
+    03_Draw_Performance 
+    04_Forward_Rendering
+    05_Shadows
+)
 
 add_executable(sandbox ${SANDBOX_SRC})
 target_link_libraries(sandbox glfw glad imgui)
