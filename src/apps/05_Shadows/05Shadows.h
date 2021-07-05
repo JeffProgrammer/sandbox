@@ -49,6 +49,7 @@ private:
    GLuint geometryProgram;
 
    GLuint groundVbo;
+   GLuint groundIbo;
    GLuint vao;
    GLuint cameraUbo;
    GLuint sunUbo;

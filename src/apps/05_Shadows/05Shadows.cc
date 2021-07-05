@@ -22,7 +22,7 @@ void ShadowsApplication::onInit()
 
    sunData.sunDir = glm::vec4(0.32f, 0.75f, 0.54f, 0.0f);
    sunData.sunColor = glm::vec4(1.4f, 1.2f, 0.4f, 0.0f);
-   sunData.ambientColor = glm::vec4(0.3f, 0.3f, 0.4f, 0.0f);
+   sunData.ambientColor = glm::vec4(0.3f, 0.3f, 0.4f, 1.0f);
    
    initGL();
 }
@@ -62,16 +62,20 @@ void ShadowsApplication::initGL()
 {
    glGenVertexArrays(1, &vao);
    glBindVertexArray(vao);
+   
+   glGenBuffers(1, &groundVbo);
+   glBindBuffer(GL_ARRAY_BUFFER, groundVbo);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(groundPlaneVertexBuffer), groundPlaneVertexBuffer, GL_STATIC_DRAW);
 
    glEnableVertexAttribArray(0);
    glEnableVertexAttribArray(1);
    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, NULL);
    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)12);
 
-   glGenBuffers(1, &groundVbo);
-   glBindBuffer(GL_ARRAY_BUFFER, groundVbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(groundPlaneVertexBuffer), groundPlaneVertexBuffer, GL_STATIC_DRAW);
-   
+   glGenBuffers(1, &groundIbo);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundIbo);
+   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(groundPlaneIndexBuffer), groundPlaneIndexBuffer, GL_STATIC_DRAW);
+
    initShader();
    initUBOs();
 }
@@ -98,7 +102,7 @@ void ShadowsApplication::initShader()
    free(fragShader);
 
    uniformCameraLocationBlock = glGetUniformBlockIndex(geometryProgram, "CameraBuffer");
-   uniformSunLocationBlock = glGetUniformBlockIndex(geometryProgram, "LightBuffer");
+   uniformSunLocationBlock = glGetUniformBlockIndex(geometryProgram, "SunBuffer");
    objectColorUboLocation = glGetUniformLocation(geometryProgram, "objectColor");
    modelMatrixUboLocation = glGetUniformLocation(geometryProgram, "modelMatrix");
    
@@ -114,8 +118,8 @@ void ShadowsApplication::destroyGL()
    glUseProgram(0);
    glDeleteProgram(geometryProgram);
 
-   GLuint deleteBuffers[3] = { cameraUbo, sunUbo, groundVbo };
-   glDeleteBuffers(3, deleteBuffers);
+   GLuint deleteBuffers[4] = { cameraUbo, sunUbo, groundVbo, groundIbo };
+   glDeleteBuffers(4, deleteBuffers);
 
    glBindVertexArray(0);
    glDeleteVertexArrays(1, &vao);
@@ -128,9 +132,9 @@ void ShadowsApplication::render(double dt)
    glClearColor(0.0, 0.0, 0.0, 1.0);
 
    glEnable(GL_DEPTH_TEST);
-   //glEnable(GL_CULL_FACE);
-   //glCullFace(GL_BACK);
-   //glFrontFace(GL_CCW);
+   glEnable(GL_CULL_FACE);
+   glCullFace(GL_BACK);
+   glFrontFace(GL_CCW);
 
    glUseProgram(geometryProgram);
 
@@ -139,16 +143,17 @@ void ShadowsApplication::render(double dt)
 
    glBindVertexArray(vao);
    glBindBuffer(GL_ARRAY_BUFFER, groundVbo);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundIbo);
 
    glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
    glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
       
    glm::mat4 model(1.0);
-   model = glm::scale(model, glm::vec3(10.0, 1.0, 10.0));
+   model = glm::scale(model, glm::vec3(20.0f, 0.0f, 20.0f));
    glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(model[0][0]));
    glUniform4f(objectColorUboLocation, 1.0f, 0.0f, 0.0f, 1.0f);
 
-   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 }
 
 void ShadowsApplication::onRenderImGUI(double dt)

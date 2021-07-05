@@ -18,5 +18,5 @@ void main()
    float angle = dot(normal, normalize(sunDir.xyz));
    angle = max(angle, 0.0);
 
-   color = vec4(1.0, 0.0, 0.0, 1.0);//(sunColor * angle) + (ambientColor * objectColor);
+   color = (sunColor * objectColor * angle) + ambientColor;
 }
