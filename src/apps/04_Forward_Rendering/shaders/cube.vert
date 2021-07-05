@@ -22,7 +22,7 @@ void main()
    mat4 modelMat = modelMatrix[gl_InstanceID];
    mat4 mvp = proj * view * modelMat;
 
-   mat3 inverseModel = mat3(inverse(transpose(modelMat)));
+   mat3 inverseModel = mat3(transpose(inverse(modelMat)));
 
    fNORMAL = (inverseModel * normal);
    fPOSITION = vec3(modelMat * vec4(pos, 1.0));
