@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.17.0 FATAL_ERROR)
 project(GraphicsSandbox)
 
 function(advanced_option_off)
@@ -65,6 +65,11 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${SANDBOX_SRC})
 if (MSVC)
     set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT sandbox)
     set_property(TARGET sandbox PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/src/")
+elseif (XCODE)
+    set_target_properties(sandbox PROPERTIES 
+        XCODE_GENERATE_SCHEME TRUE
+        XCODE_SCHEME_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/src/"
+    )
 endif()
 
 # OpenGL Library

@@ -57,6 +57,7 @@ void Application::init()
    memset(&state, 0, sizeof(state));
    state.window = glfwCreateWindow(DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_TITLE, NULL, NULL);
    glfwMakeContextCurrent(state.window);
+   glfwSwapInterval(0);
 
    if (!gladLoadGL())
    {
