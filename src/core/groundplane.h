@@ -9,3 +9,5 @@
  const static short groundPlaneIndexBuffer[] = {
      0, 2, 1, 0, 3, 2,
  };
+
+ const static int groundPlaneNumberOfVerts = 4;

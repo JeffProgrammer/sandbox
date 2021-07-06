@@ -36,6 +36,7 @@ public:
    void initShader();
    void destroyGL();
    void render(double dt);
+   void drawCube(const glm::vec3 &position, const glm::vec4 &color);
 
 private:
    Camera camera;

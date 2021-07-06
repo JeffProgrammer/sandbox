@@ -91,9 +91,13 @@ void ShadowsApplication::initGL()
       groundPlaneIboOffset = 0;
       cubeIboOffset = sizeof(groundPlaneIndexBuffer);
 
-      GLushort* buffer = (GLushort*)glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
-      memcpy(buffer + groundPlaneIboOffset, groundPlaneIndexBuffer, sizeof(groundPlaneIndexBuffer));
-      memcpy(buffer + cubeIboOffset, cubeIndices, sizeof(cubeIndices));
+      // I wanted to give an example of glMapBuffer here outside of glBufferSubData.
+      // Note that we use a char* type for the buffer, as we're working with bytes when we copy.
+      char* buffer = (char*)glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+      {
+         memcpy(buffer + 0, groundPlaneIndexBuffer, sizeof(groundPlaneIndexBuffer));
+         memcpy(buffer + sizeof(groundPlaneIndexBuffer), cubeIndices, sizeof(cubeIndices));
+      }
       glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
    }
 
@@ -174,14 +178,22 @@ void ShadowsApplication::render(double dt)
    model = glm::scale(model, glm::vec3(20.0f, 0.0f, 20.0f));
    glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(model[0][0]));
    glUniform4f(objectColorUboLocation, 1.0f, 0.0f, 0.0f, 1.0f);
-   glDrawElementsBaseVertex(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)(GLushort*)groundPlaneIboOffset, 0);
+   glDrawElementsBaseVertex(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)groundPlaneIboOffset, 0);
 
-   // draw cube
+   // draw cubes
+   drawCube(glm::vec3(0.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   drawCube(glm::vec3(5.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   drawCube(glm::vec3(0.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   drawCube(glm::vec3(5.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+}
+
+void ShadowsApplication::drawCube(const glm::vec3& position, const glm::vec4& color)
+{
    glm::mat4 cubeModel(1.0);
-   cubeModel = glm::translate(cubeModel, glm::vec3(0.0, 1.0, 0.0));
+   cubeModel = glm::translate(cubeModel, position);
    glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(cubeModel[0][0]));
-   glUniform4f(objectColorUboLocation, 0.0f, 1.0f, 0.0f, 1.0f);
-   glDrawElementsBaseVertex(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, (void*)(GLushort*)cubeIboOffset, sizeof(groundPlaneVertexBuffer)/(sizeof(float)*6));
+   glUniform4fv(objectColorUboLocation, 1, &color.x);
+   glDrawElementsBaseVertex(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, (void*)cubeIboOffset, groundPlaneNumberOfVerts);
 }
 
 void ShadowsApplication::onRenderImGUI(double dt)
