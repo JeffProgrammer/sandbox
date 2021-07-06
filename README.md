@@ -25,6 +25,9 @@ The eventual plan is to have a modern, multithreaded command buffer and graphics
     Stresses drawcalls by rendering a cube per drawcall.
 - **04 Forward Rendering**
     Renders up to 512 lights in forward rendering.
+- **05 Shadows**
+    Draws a shadowmap.\
+    *Bonus*: Packs all meshes used in the scene into 1 vertex buffer and 1 index buffer, drawing with glDrawElementsBaseVertex.
 
 ## License
 ```
