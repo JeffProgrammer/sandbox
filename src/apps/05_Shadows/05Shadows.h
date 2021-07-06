@@ -48,8 +48,8 @@ private:
 
    GLuint geometryProgram;
 
-   GLuint groundVbo;
-   GLuint groundIbo;
+   GLuint vbo;
+   GLuint ibo;
    GLuint vao;
    GLuint cameraUbo;
    GLuint sunUbo;
@@ -61,4 +61,9 @@ private:
    GLuint sunUboLocation;
    GLuint objectColorUboLocation;
    GLuint modelMatrixUboLocation;
+
+   int groundPlaneVboOffset;
+   int groundPlaneIboOffset;
+   int cubeVboOffset;
+   int cubeIboOffset;
 };

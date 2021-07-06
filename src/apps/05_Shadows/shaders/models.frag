@@ -15,8 +15,8 @@ void main()
 {
    vec3 normal = normalize(fNORMAL);
 
-   float angle = dot(normal, normalize(sunDir.xyz));
-   angle = max(angle, 0.0);
+   float angle = dot(normal, -normalize(sunDir.xyz));
+   angle = clamp(angle, 0.0, 1.0);
 
-   color = (sunColor * objectColor * angle) + ambientColor;
+   color = objectColor; //(sunColor * objectColor * angle) + ambientColor;
 }

@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include "apps/05_Shadows/05Shadows.h"
 #include "core/groundplane.h"
+#include "core/cube.h"
 #include "gl/shader.h"
 
 IMPLEMENT_APPLICATION(ShadowsApplication);
@@ -63,18 +64,38 @@ void ShadowsApplication::initGL()
    glGenVertexArrays(1, &vao);
    glBindVertexArray(vao);
    
-   glGenBuffers(1, &groundVbo);
-   glBindBuffer(GL_ARRAY_BUFFER, groundVbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(groundPlaneVertexBuffer), groundPlaneVertexBuffer, GL_STATIC_DRAW);
+   // We store all geometry shapes into 1 vbo. We allocate a vbo that's large enough
+   glGenBuffers(1, &vbo);
+   glBindBuffer(GL_ARRAY_BUFFER, vbo);
+   {
+      glBufferData(GL_ARRAY_BUFFER, 4096, NULL, GL_STATIC_DRAW);
+
+      groundPlaneVboOffset = 0;
+      cubeVboOffset = sizeof(groundPlaneVertexBuffer);
+
+      glBufferSubData(GL_ARRAY_BUFFER, groundPlaneVboOffset, sizeof(groundPlaneVertexBuffer), groundPlaneVertexBuffer);
+      glBufferSubData(GL_ARRAY_BUFFER, cubeVboOffset, sizeof(cubeVertsBuffer), cubeVertsBuffer);
+   }
 
    glEnableVertexAttribArray(0);
    glEnableVertexAttribArray(1);
    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, NULL);
    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)12);
 
-   glGenBuffers(1, &groundIbo);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundIbo);
-   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(groundPlaneIndexBuffer), groundPlaneIndexBuffer, GL_STATIC_DRAW);
+   // same as vbo...pack the index buffer
+   glGenBuffers(1, &ibo);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+   {
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, 4096, NULL, GL_STATIC_DRAW);
+
+      groundPlaneIboOffset = 0;
+      cubeIboOffset = sizeof(groundPlaneIndexBuffer);
+
+      GLushort* buffer = (GLushort*)glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+      memcpy(buffer + groundPlaneIboOffset, groundPlaneIndexBuffer, sizeof(groundPlaneIndexBuffer));
+      memcpy(buffer + cubeIboOffset, cubeIndices, sizeof(cubeIndices));
+      glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+   }
 
    initShader();
    initUBOs();
@@ -118,7 +139,7 @@ void ShadowsApplication::destroyGL()
    glUseProgram(0);
    glDeleteProgram(geometryProgram);
 
-   GLuint deleteBuffers[4] = { cameraUbo, sunUbo, groundVbo, groundIbo };
+   GLuint deleteBuffers[4] = { cameraUbo, sunUbo, vbo, ibo };
    glDeleteBuffers(4, deleteBuffers);
 
    glBindVertexArray(0);
@@ -142,18 +163,25 @@ void ShadowsApplication::render(double dt)
    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
 
    glBindVertexArray(vao);
-   glBindBuffer(GL_ARRAY_BUFFER, groundVbo);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundIbo);
+   glBindBuffer(GL_ARRAY_BUFFER, vbo);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
    glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
    glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
-      
+
+   // draw ground
    glm::mat4 model(1.0);
    model = glm::scale(model, glm::vec3(20.0f, 0.0f, 20.0f));
    glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(model[0][0]));
    glUniform4f(objectColorUboLocation, 1.0f, 0.0f, 0.0f, 1.0f);
+   glDrawElementsBaseVertex(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)(GLushort*)groundPlaneIboOffset, 0);
 
-   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
+   // draw cube
+   glm::mat4 cubeModel(1.0);
+   cubeModel = glm::translate(cubeModel, glm::vec3(0.0, 1.0, 0.0));
+   glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(cubeModel[0][0]));
+   glUniform4f(objectColorUboLocation, 0.0f, 1.0f, 0.0f, 1.0f);
+   glDrawElementsBaseVertex(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, (void*)(GLushort*)cubeIboOffset, sizeof(groundPlaneVertexBuffer)/(sizeof(float)*6));
 }
 
 void ShadowsApplication::onRenderImGUI(double dt)
