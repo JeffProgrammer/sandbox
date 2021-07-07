@@ -57,6 +57,10 @@ void ShadowsApplication::updatePerspectiveMatrix()
    camera.setProjectionMatrix(glm::perspective((float)glm::radians(110.0), getAspectRatio(), 0.01f, VIEW_DISTANCE));
 
    camera.getMatrices(cameraData.projMatrix, cameraData.viewMatrix);
+
+   glm::mat4 ortho = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
+   glm::mat4 view = glm::lookAt(glm::vec3(sunData.sunDir), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   cameraData.shadowMatrix = ortho * view;
 }
 
 void ShadowsApplication::initGL()
@@ -82,6 +86,13 @@ void ShadowsApplication::initGL()
    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, NULL);
    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)12);
 
+   // shadowmap vao
+   glGenVertexArrays(1, &shadows.vao);
+   glBindVertexArray(shadows.vao);
+   glBindBuffer(GL_ARRAY_BUFFER, vbo);
+   glEnableVertexAttribArray(0);
+   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, NULL);
+
    // same as vbo...pack the index buffer
    glGenBuffers(1, &ibo);
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
@@ -103,6 +114,22 @@ void ShadowsApplication::initGL()
 
    initShader();
    initUBOs();
+
+   glGenTextures(1, &shadows.shadowTexture2DMap);
+   glBindTexture(GL_TEXTURE_2D, shadows.shadowTexture2DMap);
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, shadows.width, shadows.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+   glGenFramebuffers(1, &shadows.fbo);
+   glBindFramebuffer(GL_FRAMEBUFFER, shadows.fbo);
+   glDrawBuffer(GL_NONE);
+   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadows.shadowTexture2DMap, 0);
+
+   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+      abort();
 }
 
 void ShadowsApplication::initUBOs()
@@ -126,8 +153,9 @@ void ShadowsApplication::initShader()
    free(vertShader);
    free(fragShader);
 
-   uniformCameraLocationBlock = glGetUniformBlockIndex(geometryProgram, "CameraBuffer");
-   uniformSunLocationBlock = glGetUniformBlockIndex(geometryProgram, "SunBuffer");
+   GLuint uniformCameraLocationBlock = glGetUniformBlockIndex(geometryProgram, "CameraBuffer");
+   GLuint uniformSunLocationBlock = glGetUniformBlockIndex(geometryProgram, "SunBuffer");
+
    objectColorUboLocation = glGetUniformLocation(geometryProgram, "objectColor");
    modelMatrixUboLocation = glGetUniformLocation(geometryProgram, "modelMatrix");
    
@@ -136,6 +164,20 @@ void ShadowsApplication::initShader()
 
    glUniformBlockBinding(geometryProgram, uniformCameraLocationBlock, cameraUboLocation);
    glUniformBlockBinding(geometryProgram, uniformSunLocationBlock, sunUboLocation);
+
+   // shadows
+
+   char* shadowVertShader = readShaderFile("apps/05_Shadows/shaders/shadow.vert");
+   char* shadowFragShader = readShaderFile("apps/05_Shadows/shaders/shadow.frag");
+
+   shadows.shaderProgram = createVertexAndFragmentShaderProgram(shadowVertShader, shadowFragShader);
+
+   free(shadowVertShader);
+   free(shadowFragShader);
+
+   GLuint uniformCameraLocationBlockShadows = glGetUniformBlockIndex(shadows.shaderProgram, "CameraBuffer");
+   shadows.modelMatrixLocation = glGetUniformLocation(shadows.shaderProgram, "modelMatrix");
+   glUniformBlockBinding(shadows.shaderProgram, uniformCameraLocationBlockShadows, cameraUboLocation);
 }
 
 void ShadowsApplication::destroyGL()
@@ -146,8 +188,12 @@ void ShadowsApplication::destroyGL()
    GLuint deleteBuffers[4] = { cameraUbo, sunUbo, vbo, ibo };
    glDeleteBuffers(4, deleteBuffers);
 
+   glDeleteTextures(1, &shadows.shadowTexture2DMap);
+   glDeleteFramebuffers(1, &shadows.fbo);
+
    glBindVertexArray(0);
-   glDeleteVertexArrays(1, &vao);
+   GLuint vaos[2] = { vao, shadows.vao };
+   glDeleteVertexArrays(2, vaos);
 }
 
 void ShadowsApplication::render(double dt)
@@ -161,38 +207,83 @@ void ShadowsApplication::render(double dt)
    glCullFace(GL_BACK);
    glFrontFace(GL_CCW);
 
-   glUseProgram(geometryProgram);
-
    glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
 
-   glBindVertexArray(vao);
+   // Render shadowmap
+   glBindVertexArray(shadows.vao);
+   glBindTexture(GL_TEXTURE_2D, 0);
+   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, shadows.fbo);
+   glViewport(0, 0, shadows.width, shadows.height);
+
+   glUseProgram(shadows.shaderProgram);
+
    glBindBuffer(GL_ARRAY_BUFFER, vbo);
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
    glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
    glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
 
-   // draw ground
-   glm::mat4 model(1.0);
-   model = glm::scale(model, glm::vec3(20.0f, 0.0f, 20.0f));
-   glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(model[0][0]));
-   glUniform4f(objectColorUboLocation, 1.0f, 0.0f, 0.0f, 1.0f);
-   glDrawElementsBaseVertex(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)groundPlaneIboOffset, 0);
+   drawScene(true);
 
-   // draw cubes
-   drawCube(glm::vec3(0.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-   drawCube(glm::vec3(5.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-   drawCube(glm::vec3(0.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-   drawCube(glm::vec3(5.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   // Render Regular World
+
+   glViewport(0, 0, windowWidth, windowHeight);
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+   glBindTexture(GL_TEXTURE_2D, 0);
+
+   glBindVertexArray(vao);
+
+   glUseProgram(geometryProgram);
+
+   glBindBuffer(GL_ARRAY_BUFFER, vbo);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+
+   glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
+   glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
+
+   drawScene(false);
 }
 
-void ShadowsApplication::drawCube(const glm::vec3& position, const glm::vec4& color)
+void ShadowsApplication::drawScene(bool shadowPass)
+{
+   drawGround(shadowPass);
+
+   drawCube(shadowPass, glm::vec3(0.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   drawCube(shadowPass, glm::vec3(5.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   drawCube(shadowPass, glm::vec3(0.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   drawCube(shadowPass, glm::vec3(5.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+}
+
+void ShadowsApplication::drawGround(bool shadowPass)
+{
+   glm::mat4 model(1.0);
+   model = glm::scale(model, glm::vec3(20.0f, 0.0f, 20.0f));
+   if (shadowPass)
+   {
+      glUniformMatrix4fv(shadows.modelMatrixLocation, 1, GL_FALSE, &(model[0][0]));
+   }
+   else
+   {
+      glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(model[0][0]));
+      glUniform4f(objectColorUboLocation, 1.0f, 0.0f, 0.0f, 1.0f);
+   }
+   glDrawElementsBaseVertex(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)groundPlaneIboOffset, 0);
+}
+
+void ShadowsApplication::drawCube(bool shadowPass, const glm::vec3& position, const glm::vec4& color)
 {
    glm::mat4 cubeModel(1.0);
    cubeModel = glm::translate(cubeModel, position);
-   glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(cubeModel[0][0]));
-   glUniform4fv(objectColorUboLocation, 1, &color.x);
+   if (shadowPass)
+   {
+      glUniformMatrix4fv(shadows.modelMatrixLocation, 1, GL_FALSE, &(cubeModel[0][0]));
+   }
+   else
+   {
+      glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(cubeModel[0][0]));
+      glUniform4fv(objectColorUboLocation, 1, &color.x);
+   }
    glDrawElementsBaseVertex(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, (void*)cubeIboOffset, groundPlaneNumberOfVerts);
 }
 

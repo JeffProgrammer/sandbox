@@ -8,6 +8,7 @@ struct CameraUbo
 {
    glm::mat4 projMatrix;
    glm::mat4 viewMatrix;
+   glm::mat4 shadowMatrix;
 };
 
 struct SunUbo
@@ -36,7 +37,10 @@ public:
    void initShader();
    void destroyGL();
    void render(double dt);
-   void drawCube(const glm::vec3 &position, const glm::vec4 &color);
+
+   void drawScene(bool shadowPass);
+   void drawGround(bool shadowPass);
+   void drawCube(bool shadowPass, const glm::vec3 &position, const glm::vec4 &color);
 
 private:
    Camera camera;
@@ -55,8 +59,16 @@ private:
    GLuint cameraUbo;
    GLuint sunUbo;
 
-   GLuint uniformCameraLocationBlock;
-   GLuint uniformSunLocationBlock;
+   struct
+   {
+      GLuint vao;
+      GLuint fbo;
+      GLuint shaderProgram;
+      GLuint modelMatrixLocation;
+      GLuint shadowTexture2DMap;
+      const int width = 1024;
+      const int height = 1024;
+   } shadows;
 
    GLuint cameraUboLocation;
    GLuint sunUboLocation;
