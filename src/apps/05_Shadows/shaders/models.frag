@@ -1,5 +1,7 @@
 in vec3 fPOSITION;
 in vec3 fNORMAL;
+in vec4 fLIGHTVIEWPOSITION;
+
 layout(location = 0) out vec4 color;
 
 layout(std140) uniform SunBuffer 
@@ -11,12 +13,26 @@ layout(std140) uniform SunBuffer
 
 uniform vec4 objectColor;
 
+uniform sampler2DShadow shadowMap;
+
 void main() 
 {
-   vec3 normal = normalize(fNORMAL);
+   color = ambientColor;
 
-   float angle = dot(normal, normalize(sunDir.xyz));
-   angle = clamp(angle, 0.0, 1.0);
+   vec3 lightDir = -sunDir.xyz;
 
-   color = objectColor + ambientColor; //(sunColor * objectColor * angle) + ambientColor;
+   vec3 projTexCoord;
+   projTexCoord.x = fLIGHTVIEWPOSITION.x / fLIGHTVIEWPOSITION.w / 2.0 + 0.5;
+   projTexCoord.y = -fLIGHTVIEWPOSITION.y / fLIGHTVIEWPOSITION.w / 2.0 + 0.5;
+   projTexCoord.z = fLIGHTVIEWPOSITION.z / fLIGHTVIEWPOSITION.w;
+   float depthValue = texture(shadowMap, projTexCoord);
+   float lightDepthValue = fLIGHTVIEWPOSITION.z / fLIGHTVIEWPOSITION.w - 0.001;
+
+   if (lightDepthValue < depthValue)
+   {
+      float lightIntensity = dot(fNORMAL, lightDir);
+      lightIntensity = clamp(lightIntensity, 0.0, 1.0);
+
+      color += objectColor * sunColor * lightIntensity;
+   }
 }

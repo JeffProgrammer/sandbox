@@ -3,6 +3,7 @@ layout(location = 1) in vec3 normal;
 
 out vec3 fPOSITION;
 out vec3 fNORMAL;
+out vec4 fLIGHTVIEWPOSITION;
 
 layout(std140) uniform CameraBuffer 
 {
@@ -19,8 +20,9 @@ void main()
 
    mat3 inverseModel = mat3(inverse(transpose(modelMatrix)));
 
-   fNORMAL = inverseModel * normal;
+   fNORMAL = normalize(inverseModel * normal);
    fPOSITION = vec3(modelMatrix * vec4(pos, 1.0));
+   fLIGHTVIEWPOSITION = fLIGHTVIEWPOSITION * modelMatrix * vec4(pos, 1.0);
 
    gl_Position = mvp * vec4(pos, 1.0);
 }

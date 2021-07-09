@@ -21,9 +21,10 @@ void ShadowsApplication::onInit()
    getWindowSize(windowWidth, windowHeight);
    setWindowTitle("Shadows Application");
 
-   sunData.sunDir = glm::vec4(0.32f, 0.75f, 0.54f, 0.0f);
+   float angle = glm::radians(-90.0);
+   sunData.sunDir = glm::vec4(glm::sin(angle), glm::cos(angle), 0.0f, 1.0f);
    sunData.sunColor = glm::vec4(1.4f, 1.2f, 0.4f, 0.0f);
-   sunData.ambientColor = glm::vec4(0.3f, 0.3f, 0.4f, 1.0f);
+   sunData.ambientColor = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
    
    initGL();
 }
@@ -58,8 +59,12 @@ void ShadowsApplication::updatePerspectiveMatrix()
 
    camera.getMatrices(cameraData.projMatrix, cameraData.viewMatrix);
 
-   glm::mat4 ortho = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
-   glm::mat4 view = glm::lookAt(glm::vec3(sunData.sunDir), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   glm::vec3 lightPos = glm::vec3(9.0, 8.0f, -0.1f);
+   glm::vec3 lightLookAt = glm::vec3(-9.0f, 0.0f, 0.0f);
+   glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+   glm::mat4 ortho = glm::ortho<float>(-20, 20, -20, 20, -10, 20);
+   glm::mat4 view = glm::lookAt(lightPos, lightLookAt, lightUp);
    cameraData.shadowMatrix = ortho * view;
 }
 
@@ -241,6 +246,10 @@ void ShadowsApplication::render(double dt)
 
    glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
    glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
+   
+   glActiveTexture(GL_TEXTURE0);
+   glBindTexture(GL_TEXTURE_2D, shadows.shadowTexture2DMap);
+   glUniform1i(shadows.shadowTexture2DMap, 0);
 
    drawScene(false);
 }
