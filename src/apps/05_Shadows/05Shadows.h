@@ -68,6 +68,7 @@ private:
       GLuint shadowTexture2DMap;
       const int width = 1024;
       const int height = 1024;
+      CameraUbo shadowCamera;
    } shadows;
 
    GLuint cameraUboLocation;

@@ -48,23 +48,37 @@ void ShadowsApplication::onWindowSizeUpdate(int width, int height)
 void ShadowsApplication::updateCamera(double dt)
 {
    Move move = {};
+
+   if (isKeyPressed(Key::FORWARD))   move.y += 1.0f;
+   if (isKeyPressed(Key::BACKWARDS)) move.y -= 1.0f;
+   if (isKeyPressed(Key::RIGHT))     move.x += 1.0f;
+   if (isKeyPressed(Key::LEFT))      move.x -= 1.0f;
+
+   glm::vec2 mouse = getMouseDelta();
+   move.pitch = mouse.y;
+   move.yaw = mouse.x;
+
    camera.update(dt, move);
    updatePerspectiveMatrix();
 }
 
 void ShadowsApplication::updatePerspectiveMatrix()
 {
-   camera.setProjectionMatrix(glm::perspective((float)glm::radians(110.0), getAspectRatio(), 0.01f, VIEW_DISTANCE));
+   camera.setProjectionMatrix(glm::perspective((float)glm::radians(90.0), getAspectRatio(), 0.01f, VIEW_DISTANCE));
 
    camera.getMatrices(cameraData.projMatrix, cameraData.viewMatrix);
 
-   glm::mat4 ortho = glm::ortho<float>(-10, 10, -10, 10, -10, 20);
-   glm::mat4 view = glm::lookAt(glm::vec3(sunData.sunDir), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-   cameraData.shadowMatrix = ortho * view;
+   glm::mat4 ortho = glm::ortho<float>(-10, 10, -10, 10, 0, 20);
+   glm::mat4 view = glm::lookAt(glm::normalize(glm::vec3(10000.0f, 10000.0f, 10000.f)), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   shadows.shadowCamera.projMatrix = ortho;
+   shadows.shadowCamera.viewMatrix = view;
+   shadows.shadowCamera.shadowMatrix = glm::mat4(1.0f);
 }
 
 void ShadowsApplication::initGL()
 {
+   glClearColor(0.0, 0.0, 0.0, 0.0);
+
    glGenVertexArrays(1, &vao);
    glBindVertexArray(vao);
    
@@ -115,6 +129,9 @@ void ShadowsApplication::initGL()
    initShader();
    initUBOs();
 
+   glGenFramebuffers(1, &shadows.fbo);
+   glBindFramebuffer(GL_FRAMEBUFFER, shadows.fbo);
+
    glGenTextures(1, &shadows.shadowTexture2DMap);
    glBindTexture(GL_TEXTURE_2D, shadows.shadowTexture2DMap);
    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, shadows.width, shadows.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
@@ -122,9 +139,9 @@ void ShadowsApplication::initGL()
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 
-   glGenFramebuffers(1, &shadows.fbo);
-   glBindFramebuffer(GL_FRAMEBUFFER, shadows.fbo);
    glDrawBuffer(GL_NONE);
    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadows.shadowTexture2DMap, 0);
 
@@ -140,7 +157,7 @@ void ShadowsApplication::initUBOs()
 
    glGenBuffers(1, &sunUbo);
    glBindBuffer(GL_UNIFORM_BUFFER, sunUbo);
-   glBufferData(GL_UNIFORM_BUFFER, sizeof(SunUbo), &sunData, GL_STATIC_DRAW);
+   glBufferData(GL_UNIFORM_BUFFER, sizeof(SunUbo), &sunData, GL_DYNAMIC_DRAW);
 }
 
 void ShadowsApplication::initShader()
@@ -198,23 +215,21 @@ void ShadowsApplication::destroyGL()
 
 void ShadowsApplication::render(double dt)
 {
-   glViewport(0, 0, windowWidth, windowHeight);
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   glClearColor(0.0, 0.0, 0.0, 1.0);
-
    glEnable(GL_DEPTH_TEST);
-   glEnable(GL_CULL_FACE);
-   glCullFace(GL_BACK);
-   glFrontFace(GL_CCW);
+   glDepthFunc(GL_LESS);
 
-   glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
-   glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
+   glEnable(GL_CULL_FACE);
+   //glCullFace(GL_BACK);
+   //glFrontFace(GL_CCW);
 
    // Render shadowmap
-   glBindVertexArray(shadows.vao);
-   glBindTexture(GL_TEXTURE_2D, 0);
-   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, shadows.fbo);
+   glBindFramebuffer(GL_FRAMEBUFFER, shadows.fbo);
    glViewport(0, 0, shadows.width, shadows.height);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   glBindVertexArray(shadows.vao);
+
+   glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
+   glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &shadows.shadowCamera);
 
    glUseProgram(shadows.shaderProgram);
 
@@ -227,12 +242,24 @@ void ShadowsApplication::render(double dt)
    drawScene(true);
 
    // Render Regular World
-
-   glViewport(0, 0, windowWidth, windowHeight);
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-   glBindTexture(GL_TEXTURE_2D, 0);
+   glViewport(0, 0, windowWidth, windowHeight);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
    glBindVertexArray(vao);
+
+   // update camera with shadow bias
+   glm::mat4 biasMatrix(
+      0.5, 0.0, 0.0, 0.0,
+      0.0, 0.5, 0.0, 0.0,
+      0.0, 0.0, 0.5, 0.0,
+      0.5, 0.5, 0.5, 1.0
+   );
+
+   glm::mat4 shadowMvp = shadows.shadowCamera.projMatrix * shadows.shadowCamera.viewMatrix;
+   cameraData.shadowMatrix = biasMatrix * shadowMvp;
+   glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
+   glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
 
    glUseProgram(geometryProgram);
 
@@ -282,7 +309,7 @@ void ShadowsApplication::drawCube(bool shadowPass, const glm::vec3& position, co
    else
    {
       glUniformMatrix4fv(modelMatrixUboLocation, 1, GL_FALSE, &(cubeModel[0][0]));
-      glUniform4fv(objectColorUboLocation, 1, &color.x);
+      glUniform4fv(objectColorUboLocation, 1, &(color[0]));
    }
    glDrawElementsBaseVertex(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, (void*)cubeIboOffset, groundPlaneNumberOfVerts);
 }

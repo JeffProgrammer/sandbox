@@ -43,5 +43,4 @@ void Camera::update(double dt, const Move& move)
 
     glm::vec3 center = mPosition + direction;
     mViewMatrix = glm::lookAt(mPosition, center, up);
-
 }
