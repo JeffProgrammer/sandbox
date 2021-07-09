@@ -16,13 +16,13 @@ uniform mat4 modelMatrix;
 
 void main() 
 {
-   mat4 mvp = proj * view * modelMatrix;
+   vec4 worldPos = modelMatrix * vec4(pos, 1.0);
 
    mat3 inverseModel = mat3(inverse(transpose(modelMatrix)));
 
    fNORMAL = (inverseModel * normal);
-   fPOSITION = vec3(modelMatrix * vec4(pos, 1.0));
-   fTEXCOORD0 = shadowProjView * vec4(pos, 1.0);
+   fPOSITION = vec3(worldPos);
+   fTEXCOORD0 = shadowProjView * worldPos;
 
-   gl_Position = mvp * vec4(pos, 1.0);
+   gl_Position = proj * view * worldPos;
 }

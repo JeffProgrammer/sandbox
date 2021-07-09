@@ -12,16 +12,28 @@ layout(std140) uniform SunBuffer
 };
 
 uniform vec4 objectColor;
-uniform sampler2DShadow shadowMap;
+uniform sampler2D shadowMap;
 
 void main() 
 {
+	float distanceToLight = texture(shadowMap, fTEXCOORD0.xy).r;
+	float lightIntensity = 1.0;
+	if (fTEXCOORD0.z > distanceToLight) {
+		lightIntensity = 1.0 - 0.8;
+	}
+
    vec3 normal = normalize(fNORMAL);
 
-   float angle = dot(normal, -normalize(sunDir.xyz));
+   float angle = dot(normal, normalize(sunDir.xyz));
    angle = clamp(angle, 0.0, 1.0);
 
-   float visibility = texture(shadowMap, vec3(fTEXCOORD0.xy, fTEXCOORD0.z/fTEXCOORD0.w));
+   //color = vec4(normal, 1);
 
-   color = vec4(visibility * vec3(objectColor), 1.0); //(sunColor * objectColor * angle) + ambientColor;
+   //color = objectColor;
+
+   //color = vec4(vec3(angle), 1);
+
+   vec4 diffuse = objectColor * (sunColor * angle);
+
+   color = diffuse * lightIntensity + ambientColor;
 }
