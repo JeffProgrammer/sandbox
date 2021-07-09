@@ -19,7 +19,7 @@ void main()
 
    mat3 inverseModel = mat3(inverse(transpose(modelMatrix)));
 
-   fNORMAL = (inverseModel * normal);
+   fNORMAL = inverseModel * normal;
    fPOSITION = vec3(modelMatrix * vec4(pos, 1.0));
 
    gl_Position = mvp * vec4(pos, 1.0);
