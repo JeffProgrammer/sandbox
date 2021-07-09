@@ -74,6 +74,7 @@ private:
    GLuint sunUboLocation;
    GLuint objectColorUboLocation;
    GLuint modelMatrixUboLocation;
+   GLuint shadowTextureLocation;
 
    int groundPlaneVboOffset;
    int groundPlaneIboOffset;

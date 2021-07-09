@@ -21,7 +21,7 @@ void ShadowsApplication::onInit()
    getWindowSize(windowWidth, windowHeight);
    setWindowTitle("Shadows Application");
 
-   float angle = glm::radians(-90.0);
+   float angle = glm::radians(90.0f);
    sunData.sunDir = glm::vec4(glm::sin(angle), glm::cos(angle), 0.0f, 1.0f);
    sunData.sunColor = glm::vec4(1.4f, 1.2f, 0.4f, 0.0f);
    sunData.ambientColor = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
@@ -127,6 +127,8 @@ void ShadowsApplication::initGL()
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 
    glGenFramebuffers(1, &shadows.fbo);
    glBindFramebuffer(GL_FRAMEBUFFER, shadows.fbo);
@@ -135,6 +137,8 @@ void ShadowsApplication::initGL()
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
       abort();
+
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void ShadowsApplication::initUBOs()
@@ -163,6 +167,7 @@ void ShadowsApplication::initShader()
 
    objectColorUboLocation = glGetUniformLocation(geometryProgram, "objectColor");
    modelMatrixUboLocation = glGetUniformLocation(geometryProgram, "modelMatrix");
+   shadowTextureLocation = glGetUniformLocation(geometryProgram, "shadowMap");
    
    cameraUboLocation = 0;
    sunUboLocation = 1;
@@ -203,8 +208,6 @@ void ShadowsApplication::destroyGL()
 
 void ShadowsApplication::render(double dt)
 {
-   glViewport(0, 0, windowWidth, windowHeight);
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glClearColor(0.0, 0.0, 0.0, 1.0);
 
    glEnable(GL_DEPTH_TEST);
@@ -220,6 +223,7 @@ void ShadowsApplication::render(double dt)
    glBindTexture(GL_TEXTURE_2D, 0);
    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, shadows.fbo);
    glViewport(0, 0, shadows.width, shadows.height);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
    glUseProgram(shadows.shaderProgram);
 
@@ -232,10 +236,9 @@ void ShadowsApplication::render(double dt)
    drawScene(true);
 
    // Render Regular World
-
-   glViewport(0, 0, windowWidth, windowHeight);
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-   glBindTexture(GL_TEXTURE_2D, 0);
+   glViewport(0, 0, windowWidth, windowHeight);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
    glBindVertexArray(vao);
 
@@ -249,7 +252,7 @@ void ShadowsApplication::render(double dt)
    
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(GL_TEXTURE_2D, shadows.shadowTexture2DMap);
-   glUniform1i(shadows.shadowTexture2DMap, 0);
+   glUniform1i(shadowTextureLocation, 0);
 
    drawScene(false);
 }
