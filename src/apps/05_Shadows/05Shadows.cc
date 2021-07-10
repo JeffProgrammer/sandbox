@@ -10,7 +10,7 @@
 
 IMPLEMENT_APPLICATION(ShadowsApplication);
 
-const float VIEW_DISTANCE = 500.0f;
+const float VIEW_DISTANCE = 100.0f;
 
 void ShadowsApplication::onInit()
 {
@@ -21,7 +21,7 @@ void ShadowsApplication::onInit()
    getWindowSize(windowWidth, windowHeight);
    setWindowTitle("Shadows Application");
 
-   sunData.sunDir = glm::vec4(0.0f, glm::radians(90.0), 0.0f, 1.0f);// glm::vec4(0.32f, 0.75f, 0.54f, 0.0f);
+   sunData.sunDir = glm::vec4(0.32f, 0.75f, 0.54f, 0.0f);
    sunData.sunColor = glm::vec4(1.4f, 1.2f, 0.4f, 0.0f);
    sunData.ambientColor = glm::vec4(0.3f, 0.3f, 0.4f, 1.0f);
    
@@ -71,21 +71,7 @@ void ShadowsApplication::updatePerspectiveMatrix()
    glm::mat4 ortho = glm::ortho<float>(-20, 20, -20, 20, 0, 20);
 
    glm::vec3 lightDir = -glm::normalize(glm::vec3(sunData.sunDir));
-   glm::mat4 lightView(1.0f);
-
-   float pitch = glm::acos(glm::vec2(lightDir.x, lightDir.z).length());
-   float yaw = glm::atan(lightDir.x / lightDir.z);
-   yaw = lightDir.z > 0 ? yaw - glm::pi<float>() : yaw;
-
-   lightView = glm::rotate(lightView, pitch, glm::vec3(1, 0, 0));
-   lightView = glm::rotate(lightView, -yaw, glm::vec3(0, 1, 0));
-   lightView = glm::translate(lightView, glm::vec3(0.0));
-
-   glm::mat4 offset(1.0);
-   offset = glm::translate(offset, glm::vec3(0.5f));
-   offset = glm::scale(offset, glm::vec3(0.5f));
-
-   lightView = lightView * offset;
+   glm::mat4 lightView = glm::lookAt(lightDir, glm::vec3(0.0f), glm::vec3(0, 1.0f, 0));
 
    shadows.shadowCamera.projMatrix = ortho;
    shadows.shadowCamera.viewMatrix = lightView;
@@ -94,7 +80,7 @@ void ShadowsApplication::updatePerspectiveMatrix()
 
 void ShadowsApplication::initGL()
 {
-   glClearColor(0.0, 0.0, 0.0, 0.0);
+   glClearColor(0.0, 0.0, 0.0, 1.0);
 
    glGenVertexArrays(1, &vao);
    glBindVertexArray(vao);
@@ -116,6 +102,8 @@ void ShadowsApplication::initGL()
    glEnableVertexAttribArray(1);
    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, NULL);
    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)12);
+
+   glBindVertexArray(0);
 
    // shadowmap vao
    glGenVertexArrays(1, &shadows.vao);
@@ -164,6 +152,9 @@ void ShadowsApplication::initGL()
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
       abort();
+
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void ShadowsApplication::initUBOs()
@@ -174,7 +165,7 @@ void ShadowsApplication::initUBOs()
 
    glGenBuffers(1, &sunUbo);
    glBindBuffer(GL_UNIFORM_BUFFER, sunUbo);
-   glBufferData(GL_UNIFORM_BUFFER, sizeof(SunUbo), &sunData, GL_DYNAMIC_DRAW);
+   glBufferData(GL_UNIFORM_BUFFER, sizeof(SunUbo), &sunData, GL_STATIC_DRAW);
 }
 
 void ShadowsApplication::initShader()
@@ -192,6 +183,7 @@ void ShadowsApplication::initShader()
 
    objectColorUboLocation = glGetUniformLocation(geometryProgram, "objectColor");
    modelMatrixUboLocation = glGetUniformLocation(geometryProgram, "modelMatrix");
+   shadowTextureLocation  = glGetUniformLocation(geometryProgram, "shadowMap");
    
    cameraUboLocation = 0;
    sunUboLocation = 1;
@@ -232,17 +224,19 @@ void ShadowsApplication::destroyGL()
 
 void ShadowsApplication::render(double dt)
 {
-   glEnable(GL_DEPTH_TEST);
-   glDepthFunc(GL_LESS);
-
    glEnable(GL_CULL_FACE);
-   glCullFace(GL_BACK);
-   glFrontFace(GL_CCW);
+   //glCullFace(GL_BACK);
+   //glFrontFace(GL_CCW);
+
+   glEnable(GL_DEPTH_TEST);
+   glDepthFunc(GL_LEQUAL);
+   glClearDepth(1.0);
+   glDepthMask(GL_TRUE);
 
    // Render shadowmap
    glBindFramebuffer(GL_FRAMEBUFFER, shadows.fbo);
    glViewport(0, 0, shadows.width, shadows.height);
-   glClear(GL_DEPTH_BUFFER_BIT);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glBindVertexArray(shadows.vao);
 
    glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
@@ -254,7 +248,6 @@ void ShadowsApplication::render(double dt)
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
    glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
-   glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
 
    drawScene(true);
 
@@ -264,12 +257,23 @@ void ShadowsApplication::render(double dt)
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glBindVertexArray(vao);
 
+   glm::mat4 biasMatrix(
+      0.5, 0.0, 0.0, 0.0,
+      0.0, 0.5, 0.0, 0.0,
+      0.0, 0.0, 0.5, 0.0,
+      0.5, 0.5, 0.5, 1.0
+   );
+
    glm::mat4 shadowMvp = shadows.shadowCamera.projMatrix * shadows.shadowCamera.viewMatrix;
-   cameraData.shadowMatrix = shadowMvp;
+   cameraData.shadowMatrix = biasMatrix * shadowMvp;
    glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
 
    glUseProgram(geometryProgram);
+
+   glActiveTexture(GL_TEXTURE0);
+   glBindTexture(GL_TEXTURE_2D, shadows.shadowTexture2DMap);
+   glUniform1i(shadowTextureLocation, 0);
 
    glBindBuffer(GL_ARRAY_BUFFER, vbo);
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);

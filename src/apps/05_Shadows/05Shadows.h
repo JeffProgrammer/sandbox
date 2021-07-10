@@ -66,8 +66,8 @@ private:
       GLuint shaderProgram;
       GLuint modelMatrixLocation;
       GLuint shadowTexture2DMap;
-      const int width = 1024;
-      const int height = 1024;
+      const int width = 4096;
+      const int height = 4096;
       CameraUbo shadowCamera;
    } shadows;
 
@@ -75,6 +75,7 @@ private:
    GLuint sunUboLocation;
    GLuint objectColorUboLocation;
    GLuint modelMatrixUboLocation;
+   GLuint shadowTextureLocation;
 
    int groundPlaneVboOffset;
    int groundPlaneIboOffset;

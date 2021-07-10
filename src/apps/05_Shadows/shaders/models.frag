@@ -33,7 +33,9 @@ void main()
 
    //color = vec4(vec3(angle), 1);
 
-   vec4 diffuse = objectColor * (sunColor * angle);
+   //vec4 diffuse = objectColor * (sunColor * angle);
 
-   color = diffuse * lightIntensity + ambientColor;
+   //color = diffuse * lightIntensity + ambientColor;
+
+   color = vec4(vec3(distanceToLight), 1.0);
 }
