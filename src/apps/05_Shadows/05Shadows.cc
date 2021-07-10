@@ -140,8 +140,8 @@ void ShadowsApplication::initGL()
    glGenTextures(1, &shadows.shadowTexture2DMap);
    glBindTexture(GL_TEXTURE_2D, shadows.shadowTexture2DMap);
    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, shadows.width, shadows.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
@@ -225,8 +225,8 @@ void ShadowsApplication::destroyGL()
 void ShadowsApplication::render(double dt)
 {
    glEnable(GL_CULL_FACE);
-   //glCullFace(GL_BACK);
-   //glFrontFace(GL_CCW);
+   glCullFace(GL_BACK);
+   glFrontFace(GL_CCW);
 
    glEnable(GL_DEPTH_TEST);
    glDepthFunc(GL_LEQUAL);
@@ -257,15 +257,8 @@ void ShadowsApplication::render(double dt)
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glBindVertexArray(vao);
 
-   glm::mat4 biasMatrix(
-      0.5, 0.0, 0.0, 0.0,
-      0.0, 0.5, 0.0, 0.0,
-      0.0, 0.0, 0.5, 0.0,
-      0.5, 0.5, 0.5, 1.0
-   );
-
    glm::mat4 shadowMvp = shadows.shadowCamera.projMatrix * shadows.shadowCamera.viewMatrix;
-   cameraData.shadowMatrix = biasMatrix * shadowMvp;
+   cameraData.shadowMatrix = shadowMvp;
    glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
 
@@ -286,12 +279,12 @@ void ShadowsApplication::render(double dt)
 
 void ShadowsApplication::drawScene(bool shadowPass)
 {
-   drawGround(shadowPass);
-
    drawCube(shadowPass, glm::vec3(0.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
    drawCube(shadowPass, glm::vec3(5.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
    drawCube(shadowPass, glm::vec3(0.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
    drawCube(shadowPass, glm::vec3(5.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   
+   drawGround(shadowPass);
 }
 
 void ShadowsApplication::drawGround(bool shadowPass)
