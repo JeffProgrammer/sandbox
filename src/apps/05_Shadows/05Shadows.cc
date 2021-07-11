@@ -140,15 +140,16 @@ void ShadowsApplication::initGL()
    glGenTextures(1, &shadows.shadowTexture2DMap);
    glBindTexture(GL_TEXTURE_2D, shadows.shadowTexture2DMap);
    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, shadows.width, shadows.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
    glDrawBuffer(GL_NONE);
-   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadows.shadowTexture2DMap, 0);
+   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadows.shadowTexture2DMap, 0);
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
       abort();
@@ -225,13 +226,17 @@ void ShadowsApplication::destroyGL()
 void ShadowsApplication::render(double dt)
 {
    glEnable(GL_CULL_FACE);
-   //glCullFace(GL_BACK);
+   glCullFace(GL_BACK);
    //glFrontFace(GL_CCW);
 
    glEnable(GL_DEPTH_TEST);
    glDepthFunc(GL_LEQUAL);
    glClearDepth(1.0);
    glDepthMask(GL_TRUE);
+
+https://arm-software.github.io/opengl-es-sdk-for-android/projected_lights.html
+   glEnable(GL_POLYGON_OFFSET_FILL);
+   glPolygonOffset(1.0, 1.0);
 
    // Render shadowmap
    glBindFramebuffer(GL_FRAMEBUFFER, shadows.fbo);
@@ -288,8 +293,8 @@ void ShadowsApplication::drawScene(bool shadowPass)
 {
    drawGround(shadowPass);
 
-   drawCube(shadowPass, glm::vec3(0.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-   drawCube(shadowPass, glm::vec3(5.0, 1.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   drawCube(shadowPass, glm::vec3(0.0, 0.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+   drawCube(shadowPass, glm::vec3(5.0, 0.0, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
    drawCube(shadowPass, glm::vec3(0.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
    drawCube(shadowPass, glm::vec3(5.0, 1.0, 5.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
 }

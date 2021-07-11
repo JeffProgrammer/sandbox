@@ -18,8 +18,8 @@ void main()
 {
 	float distanceToLight = texture(shadowMap, fTEXCOORD0.xy).r;
 	float lightIntensity = 1.0;
-	if (fTEXCOORD0.z > distanceToLight) {
-		lightIntensity = 1.0 - 0.8;
+	if (distanceToLight < fTEXCOORD0.z) {
+		lightIntensity = 1.0 - 0.5;
 	}
 
    vec3 normal = normalize(fNORMAL);
@@ -33,9 +33,10 @@ void main()
 
    //color = vec4(vec3(angle), 1);
 
-   //vec4 diffuse = objectColor * (sunColor * angle);
+   vec4 diffuse = objectColor * (sunColor);// * angle);
 
-   //color = diffuse * lightIntensity + ambientColor;
+   color = diffuse + ambientColor;
+   color *= lightIntensity;
 
    color = vec4(vec3(distanceToLight), 1.0);
 }
