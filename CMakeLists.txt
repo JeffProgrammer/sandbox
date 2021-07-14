@@ -26,6 +26,8 @@ add_subdirectory(thirdparty/glfw)
 
 add_library(glad thirdparty/glad/src/glad.c)
 
+add_library(tinyobjloader thirdparty/tinyobjloader/tiny_obj_loader.cc)
+
 add_library(imgui 
     thirdparty/imgui/imgui.cpp
     thirdparty/imgui/imgui_draw.cpp
@@ -47,6 +49,9 @@ set(SANDBOX_SRC
     src/gl/shader.h
     src/gl/shader.cc
 
+    src/resources/modelObj.h
+    src/resources/modelObj.cc
+
     src/app.h
     src/app.cc
     src/main.cc
@@ -55,10 +60,10 @@ set(SANDBOX_SRC
     src/apps/main/mainApp.cc
 )
 
-add_app(01_Hello_Cubes 02_Cpu_Particles 03_Draw_Performance 04_Forward_Rendering)
+add_app(01_Hello_Cubes 02_Cpu_Particles 03_Draw_Performance 04_Forward_Rendering 06)
 
 add_executable(sandbox ${SANDBOX_SRC})
-target_link_libraries(sandbox glfw glad imgui)
+target_link_libraries(sandbox glfw glad imgui tinyobjloader)
 target_include_directories(sandbox PRIVATE src)
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${SANDBOX_SRC})
 
@@ -86,6 +91,8 @@ include_directories(
     thirdparty/glm
     thirdparty/glad/include
     thirdparty/imgui
+    thirdparty/tinyobjloader
+    thirdparty/stb
 )
 
 add_definitions(
