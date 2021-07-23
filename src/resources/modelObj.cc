@@ -2,6 +2,16 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #include "modelObj.h"
+#include <glm/gtx/hash.hpp>
+
+// taken from Vulkan-Tutorial.com (Public Domain)
+namespace std {
+   template<> struct hash<ModelVertex> {
+      size_t operator()(ModelVertex const& vertex) const {
+         return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^ (hash<glm::vec2>()(vertex.uv) << 1);
+      }
+   };
+}
 
 bool loadTexture(const std::string &basePath, const std::string& file, Texture &outTexture)
 {
@@ -75,6 +85,8 @@ bool loadModel(const std::string& fileName, Model& model)
    const auto& normals = reader.GetAttrib().normals;
    const auto& texCoords = reader.GetAttrib().texcoords;
 
+   std::unordered_map<ModelVertex, int> uniqueVertexCount;
+
    for (const auto& shape : reader.GetShapes())
    {
       for (size_t i = 0; i < shape.mesh.indices.size() / 3; ++i)
@@ -85,13 +97,40 @@ bool loadModel(const std::string& fileName, Model& model)
 
          int materialId = shape.mesh.material_ids[i];
 
-         Model::Mesh mesh;
-         for (int j = 0; j < 3; ++j)
-         {
-            ModelVertex vert;
-         }
+         ModelVertex vert[3];
 
-         model.materialShapes[materialId].meshes.push_back(mesh);
+         vert[0].pos.x = vertices[3 * idx0.vertex_index + 0];
+         vert[0].pos.y = vertices[3 * idx0.vertex_index + 1];
+         vert[0].pos.z = vertices[3 * idx0.vertex_index + 2];
+         vert[0].normal.x = normals[3 * idx0.normal_index + 0];
+         vert[0].normal.y = normals[3 * idx0.normal_index + 1];
+         vert[0].normal.z = normals[3 * idx0.normal_index + 2];
+         vert[0].uv.x = texCoords[2 * idx0.texcoord_index + 0];
+         vert[0].uv.x = 1.0 - texCoords[2 * idx0.texcoord_index + 1];
+
+         vert[1].pos.x = vertices[3 * idx1.vertex_index + 0];
+         vert[1].pos.y = vertices[3 * idx1.vertex_index + 1];
+         vert[1].pos.z = vertices[3 * idx1.vertex_index + 2];
+         vert[1].normal.x = normals[3 * idx1.normal_index + 0];
+         vert[1].normal.y = normals[3 * idx1.normal_index + 1];
+         vert[1].normal.z = normals[3 * idx1.normal_index + 2];
+         vert[1].uv.x = texCoords[2 * idx1.texcoord_index + 0];
+         vert[1].uv.x = 1.0 - texCoords[2 * idx1.texcoord_index + 1];
+
+         vert[2].pos.x = vertices[3 * idx2.vertex_index + 0];
+         vert[2].pos.y = vertices[3 * idx2.vertex_index + 1];
+         vert[2].pos.z = vertices[3 * idx2.vertex_index + 2];
+         vert[2].normal.x = normals[3 * idx2.normal_index + 0];
+         vert[2].normal.y = normals[3 * idx2.normal_index + 1];
+         vert[2].normal.z = normals[3 * idx2.normal_index + 2];
+         vert[2].uv.x = texCoords[2 * idx2.texcoord_index + 0];
+         vert[2].uv.x = 1.0 - texCoords[2 * idx2.texcoord_index + 1];
+
+         model.materialShapes[materialId].verts.push_back(vert[0]);
+         model.materialShapes[materialId].verts.push_back(vert[1]);
+         model.materialShapes[materialId].verts.push_back(vert[2]);
+
+         model.totalModelVertCount += 3;
       }
    }
 

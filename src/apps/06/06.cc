@@ -20,9 +20,14 @@ void A06Application::onInit()
    getWindowSize(windowWidth, windowHeight);
    setWindowTitle("06 Application");
 
+   sunData.sunDir = glm::vec4(0.32f, 0.75f, 0.54f, 0.0f);
+   sunData.sunColor = glm::vec4(1.4f, 1.2f, 0.4f, 0.0f);
+   sunData.ambientColor = glm::vec4(0.3f, 0.3f, 0.4f, 0.0f);
+
    if (!loadModel("../thirdparty/models/sponza/sponza.obj", sponza))
       abort();
 
+   initScene();
    initGL();
 }
 
@@ -59,29 +64,64 @@ void A06Application::updatePerspectiveMatrix()
 
 void A06Application::initGL()
 {
-   glGenVertexArrays(1, &vao);
-   glBindVertexArray(vao);
-
-   glGenBuffers(1, &vbo);
-   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertsBuffer), cubeVertsBuffer, GL_STATIC_DRAW);
-
-   glEnableVertexAttribArray(0);
-   glEnableVertexAttribArray(1);
-   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, NULL);
-   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)12);
-
-   glGenBuffers(1, &ibo);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
-
    initShader();
    initUBOs();
 }
 
 void A06Application::initScene()
 {
+   glGenVertexArrays(1, &scene.sponzaVao);
+   glBindVertexArray(scene.sponzaVao);
 
+   glGenBuffers(1, &scene.sponzaVbo);
+   glBindBuffer(GL_ARRAY_BUFFER, scene.sponzaVbo);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(ModelVertex) * sponza.totalModelVertCount, NULL, GL_STATIC_DRAW);
+
+   glEnableVertexAttribArray(0);
+   glEnableVertexAttribArray(1);
+   glEnableVertexAttribArray(2);
+   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ModelVertex), (void*)offsetof(ModelVertex, pos));
+   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ModelVertex), (void*)offsetof(ModelVertex, normal));
+   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ModelVertex), (void*)offsetof(ModelVertex, uv));
+
+   int startOffset = 0;
+   for (const auto& pair : sponza.materialShapes)
+   {
+      int materialId = pair.first;
+      const std::vector<ModelVertex>& verts = pair.second.verts;
+      const Material& material = sponza.materials[materialId];
+
+      SceneMesh mesh;
+
+      glBufferSubData(GL_ARRAY_BUFFER, startOffset * sizeof(ModelVertex), sizeof(ModelVertex) * verts.size(), verts.data());
+
+      mesh.count = verts.size();
+      mesh.vboStartOffset = startOffset;
+      startOffset += mesh.count;
+
+      // Generate texture
+      glGenTextures(1, &mesh.diffuseTexture);
+      glBindTexture(GL_TEXTURE_2D, mesh.diffuseTexture);
+      glTexSubImage2D(
+         GL_TEXTURE_2D, 
+         0, 
+         0, 
+         0, 
+         material.diffuseTexture.width, 
+         material.diffuseTexture.height, 
+         material.diffuseTexture.components == 4 ? GL_RGBA : GL_RGB, 
+         GL_UNSIGNED_BYTE, 
+         material.diffuseTexture.pixels
+      );
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glGenerateMipmap(GL_TEXTURE_2D);
+      glBindTexture(GL_TEXTURE_2D, 0);
+
+      scene.sponzaMeshes.push_back(mesh);
+   }
 }
 
 void A06Application::initUBOs()
@@ -89,6 +129,10 @@ void A06Application::initUBOs()
    glGenBuffers(1, &cameraUbo);
    glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
    glBufferData(GL_UNIFORM_BUFFER, sizeof(CameraUbo), NULL, GL_DYNAMIC_DRAW);
+
+   glGenBuffers(1, &sunUbo);
+   glBindBuffer(GL_UNIFORM_BUFFER, sunUbo);
+   glBufferData(GL_UNIFORM_BUFFER, sizeof(SunUbo), &sunData, GL_STATIC_DRAW);
 }
 
 void A06Application::initShader()
@@ -96,28 +140,37 @@ void A06Application::initShader()
    char* vertShader = readShaderFile("apps/06/shaders/model.vert");
    char* fragShader = readShaderFile("apps/06/shaders/model.frag");
 
-   shaderProgram = createVertexAndFragmentShaderProgram(vertShader, fragShader);
+   scene.sponzaShader = createVertexAndFragmentShaderProgram(vertShader, fragShader);
 
    free(vertShader);
    free(fragShader);
 
-   uniformCameraLocation = glGetUniformBlockIndex(shaderProgram, "CameraBuffer");
+   scene.sponzaCameraUboLocation = glGetUniformBlockIndex(scene.sponzaShader, "CameraBuffer");
+   scene.sponzaSunUboLocation = glGetUniformBlockIndex(scene.sponzaShader, "SunBuffer");
+   scene.sponzaTextureLocation = glGetUniformLocation(scene.sponzaShader, "diffuseTexture");
 
    cameraUboLocation = 0;
+   sunUboLocation = 1;
 
-   glUniformBlockBinding(shaderProgram, uniformCameraLocation, cameraUboLocation);
+   glUniformBlockBinding(scene.sponzaShader, scene.sponzaCameraUboLocation, cameraUboLocation);
+   glUniformBlockBinding(scene.sponzaShader, scene.sponzaSunUboLocation, sunUboLocation);
 }
 
 void A06Application::destroyGL()
 {
    glUseProgram(0);
-   glDeleteProgram(shaderProgram);
+   glDeleteProgram(scene.sponzaShader);
 
-   GLuint deleteBuffers[3] = { vbo, ibo, cameraUbo };
-   glDeleteBuffers(3, deleteBuffers);
+   for (const auto& mesh : scene.sponzaMeshes) 
+   {
+      glDeleteTextures(1, &mesh.diffuseTexture);
+   }
+
+   GLuint deleteBuffers[2] = { scene.sponzaVbo, cameraUbo };
+   glDeleteBuffers(2, deleteBuffers);
 
    glBindVertexArray(0);
-   glDeleteVertexArrays(1, &vao);
+   glDeleteVertexArrays(1, &scene.sponzaVao);
 }
 
 void A06Application::render(double dt)
@@ -131,16 +184,24 @@ void A06Application::render(double dt)
    glCullFace(GL_BACK);
    glFrontFace(GL_CCW);
 
-   glUseProgram(shaderProgram);
+   glUseProgram(scene.sponzaShader);
 
    glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
 
-   glBindVertexArray(vao);
-   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+   glBindVertexArray(scene.sponzaVao);
+   glBindBuffer(GL_ARRAY_BUFFER, scene.sponzaVbo);
 
+   glBindTexture(GL_TEXTURE_2D, GL_TEXTURE0);
    glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
+   glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
+   glUniform1i(scene.sponzaTextureLocation, 0);
+
+   for (const SceneMesh& mesh : scene.sponzaMeshes)
+   {
+      glBindTexture(GL_TEXTURE_2D, mesh.diffuseTexture);
+      glDrawArrays(GL_TRIANGLES, mesh.vboStartOffset, mesh.count);
+   }
 }
 
 void A06Application::onRenderImGUI(double dt)

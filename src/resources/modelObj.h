@@ -37,15 +37,10 @@ struct Model
    struct Mesh
    {
       std::vector<ModelVertex> verts;
-      std::vector<uint32_t> indices;
    };
 
-   struct ShapeMaterial
-   {
-      std::vector<Mesh> meshes;
-   };
-
-   std::unordered_map<int, ShapeMaterial> materialShapes;
+   std::unordered_map<int, Mesh> materialShapes;
+   int totalModelVertCount;
    std::vector<Material> materials;
 };
 

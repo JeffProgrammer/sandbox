@@ -10,33 +10,32 @@ struct CameraUbo
    glm::mat4 viewMatrix;
 };
 
-struct SceneShape
+struct SunUbo
 {
-   int count;
-   int vboOffset;
-   int indexOffset;
+   glm::vec4 sunDir;
+   glm::vec4 sunColor;
+   glm::vec4 ambientColor;
 };
 
-struct SceneMaterialShapeGroup
+struct SceneMesh
 {
    GLuint diffuseTexture;
-   GLuint bumpTexture;
-   GLuint specularTexture;
-   GLuint shaderProgram;
-   std::vector<SceneShape> shapes;
-};
+   //GLuint bumpTexture;
+   //GLuint specularTexture;
 
-struct MaterialBin
-{
-   std::vector<SceneMaterialShapeGroup> materialGroup;
-   GLuint shaderProgram;
+   int count;
+   int vboStartOffset;
 };
 
 struct SceneGraph
 {
-   GLuint vbo;
-   GLuint ibo;
-   std::vector<MaterialBin> bin;
+   GLuint sponzaVao;
+   GLuint sponzaVbo;
+   GLuint sponzaShader;
+   GLuint sponzaCameraUboLocation;
+   GLuint sponzaSunUboLocation;
+   GLuint sponzaTextureLocation;
+   std::vector<SceneMesh> sponzaMeshes;
 };
 
 class A06Application : public Application
@@ -67,18 +66,14 @@ private:
    Camera camera;
 
    CameraUbo cameraData;
+   SunUbo sunData;
 
    int windowWidth;
    int windowHeight;
 
-   GLuint shaderProgram;
-
-   GLuint vbo;
-   GLuint ibo;
-   GLuint vao;
    GLuint cameraUbo;
-
-   GLuint uniformCameraLocation;
+   GLuint sunUbo;
 
    GLuint cameraUboLocation;
+   GLuint sunUboLocation;
 };
