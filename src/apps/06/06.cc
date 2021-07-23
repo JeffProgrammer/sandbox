@@ -100,15 +100,16 @@ void A06Application::initScene()
       startOffset += mesh.count;
 
       // Generate texture
+      glActiveTexture(GL_TEXTURE0);
       glGenTextures(1, &mesh.diffuseTexture);
       glBindTexture(GL_TEXTURE_2D, mesh.diffuseTexture);
-      glTexSubImage2D(
+      glTexImage2D(
          GL_TEXTURE_2D, 
          0, 
-         0, 
-         0, 
+         material.diffuseTexture.components == 4 ? GL_RGBA : GL_RGB, 
          material.diffuseTexture.width, 
-         material.diffuseTexture.height, 
+         material.diffuseTexture.height,
+         0,
          material.diffuseTexture.components == 4 ? GL_RGBA : GL_RGB, 
          GL_UNSIGNED_BYTE, 
          material.diffuseTexture.pixels
@@ -192,7 +193,6 @@ void A06Application::render(double dt)
    glBindVertexArray(scene.sponzaVao);
    glBindBuffer(GL_ARRAY_BUFFER, scene.sponzaVbo);
 
-   glBindTexture(GL_TEXTURE_2D, GL_TEXTURE0);
    glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
    glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
    glUniform1i(scene.sponzaTextureLocation, 0);
