@@ -47,6 +47,9 @@ set(SANDBOX_SRC
     src/gl/shader.h
     src/gl/shader.cc
 
+    src/resources/modelObj.cc
+    src/resources/modelObj.h
+
     src/app.h
     src/app.cc
     src/main.cc
@@ -55,7 +58,7 @@ set(SANDBOX_SRC
     src/apps/main/mainApp.cc
 )
 
-add_app(01_Hello_Cubes 02_Cpu_Particles 03_Draw_Performance 04_Forward_Rendering)
+add_app(01_Hello_Cubes 02_Cpu_Particles 03_Draw_Performance 04_Forward_Rendering 05_Sponza)
 
 add_executable(sandbox ${SANDBOX_SRC})
 target_link_libraries(sandbox glfw glad imgui)
@@ -86,6 +89,7 @@ include_directories(
     thirdparty/glm
     thirdparty/glad/include
     thirdparty/imgui
+    thirdparty/tinygltf
 )
 
 add_definitions(
