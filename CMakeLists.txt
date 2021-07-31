@@ -42,6 +42,17 @@ set(SANDBOX_SRC
     src/core/camera.cc
     src/core/cube.h
 
+    src/gfx/gfxCmdBuffer.h
+    src/gfx/gfxCmdBuffer.cc
+    src/gfx/gfxDevice.h
+    src/gfx/gfxDevice.cc
+    src/gfx/gfxTypes.h
+
+    src/gfx/OpenGL/gfxGLCmdBuffer.h
+    src/gfx/OpenGL/gfxGLCmdBuffer.cc
+    src/gfx/OpenGL/gfxGLDevice.h
+    src/gfx/OpenGL/gfxGLDevice.cc
+
     src/gl/gpuProfiler.h
     src/gl/gpuProfiler.cc
     src/gl/shader.h
