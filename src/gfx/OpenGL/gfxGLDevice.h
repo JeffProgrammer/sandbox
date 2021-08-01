@@ -53,4 +53,6 @@ private:
    GLenum _getBufferUsage(BufferUsageEnum usage) const;
    GLenum _getBufferType(BufferType type) const;
    GLenum _getPrimitiveType(PrimitiveType primitiveType) const;
+   GLenum _getShaderType(GFXShaderType shaderType) const;
+   GLuint _createShaderProgram(const GFXShaderDesc* shader, uint32_t count);
 };

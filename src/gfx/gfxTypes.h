@@ -4,6 +4,7 @@ typedef unsigned int BufferHandle;
 typedef unsigned int PipelineHandle;
 typedef unsigned int PipelineHandle;
 typedef unsigned int StateBlockHandle;
+typedef unsigned int TextureHandle;
 
 enum class BufferUsageEnum
 {
@@ -58,6 +59,12 @@ enum class InputLayoutFormat
    UNSIGNED_BYTE,
    UNSIGNED_SHORT,
    UNSIGNED_INT
+};
+
+enum class GFXShaderType
+{
+   VERTEX,
+   FRAGMENT
 };
 
 enum class InputLayoutClassification
@@ -166,8 +173,17 @@ struct GFXInputLayoutDesc
    uint32_t count;
 };
 
+struct GFXShaderDesc
+{
+   GFXShaderType type;
+   const char* code;
+   uint32_t codeLength;
+};
+
 struct GFXPipelineDesc
 {
+   GFXShaderDesc* shadersStages;
+   uint32_t shaderStageCount;
    GFXInputLayoutDesc inputLayout;
    PrimitiveType primitiveType;
 };

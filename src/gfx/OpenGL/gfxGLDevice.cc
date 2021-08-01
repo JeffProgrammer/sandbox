@@ -1,5 +1,41 @@
 #include "gfx/OpenGL/gfxGLDevice.h"
 
+static void validateShaderCompilation(GLuint shader)
+{
+   GLint status;
+   glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+   if (!status)
+   {
+      GLint len;
+      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+
+      GLchar* log = new GLchar[len];
+      glGetShaderInfoLog(shader, len, NULL, log);
+
+      printf("OpenGL Shader Compiler Error: %s\n", log);
+      delete[] log;
+      abort();
+   }
+}
+
+static void validateShaderLinkCompilation(GLuint program)
+{
+   GLint status;
+   glGetProgramiv(program, GL_LINK_STATUS, &status);
+   if (!status)
+   {
+      GLint len;
+      glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
+
+      GLchar* log = new GLchar[len];
+      glGetProgramInfoLog(program, len, NULL, log);
+
+      printf("OpenGL Shader Linking Error: %s\n", log);
+      delete[] log;
+      abort();
+   }
+}
+
 BufferHandle GFXGLDevice::createBuffer(const GFXBufferDesc& desc)
 {
    GLenum usage = _getBufferUsage(desc.usage);
@@ -40,6 +76,7 @@ PipelineHandle GFXGLDevice::createPipeline(const GFXPipelineDesc& desc)
    glBindVertexArray(pipelineState.vaoHandle);
 
    pipelineState.primitiveType = _getPrimitiveType(desc.primitiveType);
+   pipelineState.shader = _createShaderProgram(desc.shaderStages, desc.shaderStageCount); 
 
    PipelineHandle returnHandle = mPipelineHandleCounter++;
    mPipelines[returnHandle] = pipelineState;
@@ -121,4 +158,44 @@ GLenum GFXGLDevice::_getPrimitiveType(PrimitiveType primitiveType) const
    }
 
    return 0;
+}
+
+GLenum GFXGLDevice::_getShaderType(GFXShaderType type) const
+{
+   switch (type)
+   {
+   case ShaderType::VERTEX:
+      return GL_VERTEX_SHADER;
+   case ShaderType::FRAGMENT:
+      return GL_FRAGMENT_SHADER;
+   }
+
+   return 0;
+}
+
+GLuint _createShaderProgram(const GFXShaderDesc* shader, uint32_t count)
+{
+   std::vector<GLuint> glHandles;
+
+   for (uint32_t i = 0; i < count; i++)
+   {
+      const GFXShaderDesc& shaderStage = shader[i];
+      GLenum shaderType = _getShaderType(shaderStage.type);
+
+      GLuint handle = glCreateShader(shaderType);
+      glShaderSource(handle, 1, &shader.code, NULL);
+      glCompileShader(handle);
+      validateShaderCompilation(handle);
+
+      glHandles.push_back(handle);
+   }
+
+   GLuint shaderProgram = glCreateProgram();
+   for (GLuint handle : glHandles)
+      glAttachShader(shaderProgram, handle);
+
+   glLinkProgram(shaderProgram);
+   validateShaderLinkCompilation(shaderProgram);
+
+   return shaderProgram;
 }
