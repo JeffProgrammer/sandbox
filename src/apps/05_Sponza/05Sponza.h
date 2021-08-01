@@ -25,6 +25,7 @@ struct SceneMesh
 
    int count;
    int vboStartOffset;
+   int iboIndex;
 };
 
 struct SceneGraph
@@ -60,7 +61,7 @@ public:
    void render(double dt);
 
 private:
-   Model sponza;
+   tinygltf::Model sponza;
    SceneGraph scene;
 
    Camera camera;

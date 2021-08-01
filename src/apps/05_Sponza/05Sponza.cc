@@ -3,9 +3,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/color_space.hpp>
 #include <imgui.h>
+#include <tiny_gltf.h>
 #include "apps/05_Sponza/05Sponza.h"
 #include "core/cube.h"
 #include "gl/shader.h"
+#include "resources/modelObj.h"
 
 IMPLEMENT_APPLICATION(A06Application);
 
@@ -24,7 +26,7 @@ void A06Application::onInit()
    sunData.sunColor = glm::vec4(1.4f, 1.2f, 0.4f, 0.0f);
    sunData.ambientColor = glm::vec4(0.3f, 0.3f, 0.4f, 0.0f);
 
-   if (!loadModel("../thirdparty/models/Sponza/glTF/Sponza.gltf", sponza))
+   if (!loadModel("../thirdparty/models/Sponza/glTF/Sponza.gltf", &sponza))
       abort();
 
    initScene();
@@ -70,7 +72,18 @@ void A06Application::initGL()
 
 void A06Application::initScene()
 {
+   // Buffer holds the vertex and index data
+   const tinygltf::Buffer& buffer = sponza.buffers[0];
+   
    glGenVertexArrays(1, &scene.sponzaVao);
+   glBindVertexArray(scene.sponzaVao);
+
+   glGenBuffers(1, &scene.sponzaVbo);
+   glBindBuffer(GL_ARRAY_BUFFER, scene.sponzaVbo);
+   //glBufferData(GL_ARRAY_BUFFER, buffer.data.size(), buffer.data.data(), GL_STATIC_DRAW);
+
+   
+   /*glGenVertexArrays(1, &scene.sponzaVao);
    glBindVertexArray(scene.sponzaVao);
 
    glGenBuffers(1, &scene.sponzaVbo);
@@ -122,6 +135,7 @@ void A06Application::initScene()
 
       scene.sponzaMeshes.push_back(mesh);
    }
+    */
 }
 
 void A06Application::initUBOs()
