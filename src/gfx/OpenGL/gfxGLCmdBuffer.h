@@ -1,4 +1,5 @@
-class GFXGLCmdBuffer : public GFXCmdBuffer
-{
-    virtual void submit() override;
-};
+#pragma once
+
+#include "gfx/gfxCmdBuffer.h"
+
+class GFXGLDevice;

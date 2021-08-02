@@ -1,3 +1,5 @@
+#include "gfx/gfxCmdBuffer.h"
+
 void GFXCmdBuffer::begin()
 {
     memset(cmdBuffer, 0, COMMAND_BUFFER_SIZE);
@@ -22,7 +24,7 @@ void GFXCmdBuffer::setViewport(int x, int y, int width, int height)
     cmdBuffer[offset++] = height;
 }
 
-void GFXCmdBuffer::setScissor(const GFXCmdScissor& scissor)
+void GFXCmdBuffer::setScissor(int x, int y, int width, int height)
 {
     int type = (int)CommandType::Scissor;
     cmdBuffer[offset++] = type;
@@ -92,7 +94,7 @@ void GFXCmdBuffer::bindVertexBuffer(uint32_t bindingSlot, BufferHandle buffer, u
     cmdBuffer[offset++] = offset;
 }
 
-void GFXCmdBuffer::bindVertexBuffers(uint32_t startBindingSlot, uint32_t count, const BufferHandle *buffers, const uint32_t* strides, const uint32_t* offsets);
+void GFXCmdBuffer::bindVertexBuffers(uint32_t startBindingSlot, uint32_t count, const BufferHandle *buffers, const uint32_t* strides, const uint32_t* offsets)
 {
     int type = (int)CommandType::BindVertexBuffer;
     cmdBuffer[offset++] = type;
@@ -145,7 +147,7 @@ void GFXCmdBuffer::drawIndexedPrimitives(int vertexCount, int indexBufferOffset)
     cmdBuffer[offset++] = indexBufferOffset;
 }
 
-void GFXCmdBuffer::drawIndexedPrimitives(int vertexCount,  int indexBufferOffset, int instanceCount)
+void GFXCmdBuffer::drawIndexedPrimitivesInstanced(int vertexCount,  int indexBufferOffset, int instanceCount)
 {
     int type = (int)CommandType::DrawIndexedPrimitivesInstanced;
     cmdBuffer[offset++] = type;

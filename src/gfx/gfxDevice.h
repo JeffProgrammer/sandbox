@@ -2,6 +2,8 @@
 
 #include "gfx/gfxTypes.h"
 
+class GFXCmdBuffer;
+
 class GFXDevice
 {
 public:
@@ -13,4 +15,6 @@ public:
 
    virtual void* mapBuffer(BufferHandle handle) = 0;
    virtual void unmapBuffer(BufferHandle handle) = 0;
+
+   virtual void executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count) = 0;
 };

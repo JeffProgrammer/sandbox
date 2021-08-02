@@ -3,9 +3,12 @@
 #include <unordered_map>
 #include <glad/glad.h>
 #include "gfx/gfxDevice.h"
+#include "gfx/gfxCmdBuffer.h"
 
 class GFXGLDevice : public GFXDevice
 {
+   friend class GFXGLCmdBuffer;
+
    struct GLBuffer
    {
       GLuint buffer;
@@ -20,10 +23,37 @@ class GFXGLDevice : public GFXDevice
       GLenum primitiveType;
    };
 
+   struct GLRasterizerState
+   {
+
+   };
+
+   struct GLDepthState
+   {
+
+   };
+
+   struct GLStencilState
+   {
+
+   };
+
+   struct GLBlendState
+   {
+
+   };
+
    struct
    {
       GLuint primitiveType;
       GLuint currentProgram;
+      GLenum indexBufferType;
+
+      // cached states...
+      GLRasterizerState cacheRasterizerState;
+      GLDepthState cacheDepthState;
+      GLStencilState cacheStencilState;
+      GLBlendState cacheBlendState;
    } mState;
 
    struct
@@ -37,7 +67,17 @@ class GFXGLDevice : public GFXDevice
    std::unordered_map<PipelineHandle, GLPipeline> mPipelines;
    int mPipelineHandleCounter = 0;
 
-   std::unordered_map<StateBlockHandle, RasterizerState> mRasterizerStates;
+   std::unordered_map<StateBlockHandle, GLRasterizerState> mRasterizerStates;
+   int mRasterizerHandleCounter = 0;
+
+   std::unordered_map<StateBlockHandle, GLDepthState> mDepthStates;
+   int mDepthStateHandleCounter = 0;
+
+   std::unordered_map<StateBlockHandle, GLStencilState> mStencilState;
+   int mStencilStateHandleCounter = 0;
+
+   std::unordered_map<StateBlockHandle, GLBlendState> mBlendState;
+   int mBlendStateHandleCounter = 0;
 
 public:
    virtual BufferHandle createBuffer(const GFXBufferDesc& desc) override;
@@ -48,6 +88,8 @@ public:
 
    virtual void* mapBuffer(BufferHandle handle) override;
    virtual void unmapBuffer(BufferHandle handle) override;
+
+   virtual void executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count) override;
 
 private:
    GLenum _getBufferUsage(BufferUsageEnum usage) const;

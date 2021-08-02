@@ -57,7 +57,7 @@ void GFXGLDevice::deleteBuffer(BufferHandle handle)
    const auto& found = mBuffers.find(handle);
    if (found != mBuffers.end())
    {
-      glDeleteBuffers(1, &found->second.handle);
+      glDeleteBuffers(1, &found->second.buffer);
       mBuffers.erase(found);
    }
 #ifdef GFX_DEBUG
@@ -76,7 +76,7 @@ PipelineHandle GFXGLDevice::createPipeline(const GFXPipelineDesc& desc)
    glBindVertexArray(pipelineState.vaoHandle);
 
    pipelineState.primitiveType = _getPrimitiveType(desc.primitiveType);
-   pipelineState.shader = _createShaderProgram(desc.shaderStages, desc.shaderStageCount); 
+   pipelineState.shader = _createShaderProgram(desc.shadersStages, desc.shaderStageCount); 
 
    PipelineHandle returnHandle = mPipelineHandleCounter++;
    mPipelines[returnHandle] = pipelineState;
@@ -111,6 +111,186 @@ void GFXGLDevice::unmapBuffer(BufferHandle handle)
 {
    //const auto& found = mBuffers.find(handle);
    //glUnmapBuffer(found->second.type);
+}
+
+void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
+{
+   for (int i = 0; i < count; i++)
+   {
+      const GFXCmdBuffer* cmd = cmdBuffers[i];
+      const uint32_t* cmdBuffer = cmd->cmdBuffer;
+
+      size_t offset = 0;
+      for (;;)
+      {
+         switch ((CommandType)cmd->cmdBuffer[offset++])
+         {
+         case CommandType::Viewport:
+         {
+            int x = cmdBuffer[offset++];
+            int y = cmdBuffer[offset++];
+            int w = cmdBuffer[offset++];
+            int h = cmdBuffer[offset++];
+            glViewport(x, y, w, h);
+            break;
+         }
+
+         case CommandType::Scissor:
+         {
+            int x = cmdBuffer[offset++];
+            int y = cmdBuffer[offset++];
+            int w = cmdBuffer[offset++];
+            int h = cmdBuffer[offset++];
+            glScissor(x, y, w, h);
+            break;
+         }
+
+         case CommandType::RasterizerState:
+         {
+            break;
+         }
+
+         case CommandType::DepthState:
+         {
+            break;
+         }
+
+         case CommandType::StencilState:
+         {
+            break;
+         }
+
+         case CommandType::BlendState:
+         {
+            break;
+         }
+
+         case CommandType::BindPipeline:
+         {
+            const BufferHandle handle = static_cast<BufferHandle>(cmdBuffer[offset++]);
+            const GFXGLDevice::GLPipeline& pipeline = mPipelines[handle];
+
+            glBindVertexArray(pipeline.vaoHandle);
+            glUseProgram(pipeline.shader);
+
+            mState.currentProgram = pipeline.shader;
+            mState.primitiveType = pipeline.primitiveType;
+            break;
+         }
+
+         case CommandType::UpdatePushConstants:
+         {
+
+            break;
+         }
+
+         case CommandType::BindDescriptorSets:
+         {
+            //https://developer.nvidia.com/vulkan-shader-resource-binding
+            break;
+         }
+
+         case CommandType::BindVertexBuffer:
+         {
+            GLuint bindingSlot = cmdBuffer[offset++];
+            GLuint buffer = mBuffers[cmdBuffer[offset++]].buffer;
+            GLsizei stride = static_cast<GLsizei>(cmdBuffer[offset++]);
+            GLintptr offset = static_cast<GLintptr>(cmdBuffer[offset++]);
+
+            glBindVertexBuffer(bindingSlot, buffer, offset, stride);
+            break;
+         }
+
+         case CommandType::BindVertexBuffers:
+         {
+            GLuint startBindingSlot = cmdBuffer[offset++];
+            GLsizei count = static_cast<GLsizei>(cmdBuffer[offset++]);
+
+            static GLuint buffers[8];
+            static GLsizei strides[8];
+            static GLintptr offsets[8];
+
+            for (GLsizei i = 0; i < count; i++)
+            {
+               buffers[i] = mBuffers[cmdBuffer[offset++]].buffer;
+               strides[i] = static_cast<GLsizei>(cmdBuffer[offset++]);
+               offsets[i] = static_cast<GLintptr>(cmdBuffer[offset++]);
+            }
+
+            if (true)//mCaps.hasBindVertexBuffers)
+            {
+               glBindVertexBuffers(startBindingSlot, count, buffers, offsets, strides);
+            }
+            else
+            {
+               for (GLsizei i = 0; i < count; i++)
+               {
+                  glBindVertexBuffer(startBindingSlot + i, buffers[i], offsets[i], strides[i]);
+               }
+            }
+
+            break;
+         }
+
+         case CommandType::BindIndexBuffer:
+         {
+            const BufferHandle handle = static_cast<BufferHandle>(cmdBuffer[offset++]);
+            const GFXIndexBufferType type = (GFXIndexBufferType)cmdBuffer[offset++];
+            const GLuint buffer = mBuffers[handle].buffer;
+
+            mState.indexBufferType = type == GFXIndexBufferType::BITS_16 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+            break;
+         }
+
+         case CommandType::DrawPrimitives:
+         {
+            int vertexStart = cmdBuffer[offset++];
+            int vertexCount = cmdBuffer[offset++];
+
+            glDrawArrays(mState.primitiveType, vertexStart, vertexCount);
+            break;
+         }
+
+         case CommandType::DrawPrimitivesInstanced:
+         {
+            int vertexStart = cmdBuffer[offset++];
+            int vertexCount = cmdBuffer[offset++];
+            int instanceCount = cmdBuffer[offset++];
+
+            glDrawArraysInstanced(mState.primitiveType, vertexStart, vertexCount, instanceCount);
+            break;
+         }
+
+         case CommandType::DrawIndexedPrimitives:
+         {
+            int vertexCount = cmdBuffer[offset++];
+            GLuint indexBufferOffset = cmdBuffer[offset++];
+
+            glDrawElements(mState.primitiveType, vertexCount, mState.indexBufferType, (void*)indexBufferOffset);
+            break;
+         }
+
+         case CommandType::DrawIndexedPrimitivesInstanced:
+         {
+            int vertexCount = cmdBuffer[offset++];
+            GLuint indexBufferOffset = cmdBuffer[offset++];
+            int instanceCount = cmdBuffer[offset++];
+
+            glDrawElementsInstanced(mState.primitiveType, vertexCount, mState.indexBufferType, (void*)indexBufferOffset, instanceCount);
+            break;
+         }
+
+         case CommandType::End:
+         {
+            goto done;
+         }
+         }
+      }
+
+   done:
+      ;
+   }
 }
 
 GLenum GFXGLDevice::_getBufferUsage(BufferUsageEnum usage) const
@@ -164,16 +344,16 @@ GLenum GFXGLDevice::_getShaderType(GFXShaderType type) const
 {
    switch (type)
    {
-   case ShaderType::VERTEX:
+   case GFXShaderType::VERTEX:
       return GL_VERTEX_SHADER;
-   case ShaderType::FRAGMENT:
+   case GFXShaderType::FRAGMENT:
       return GL_FRAGMENT_SHADER;
    }
 
    return 0;
 }
 
-GLuint _createShaderProgram(const GFXShaderDesc* shader, uint32_t count)
+GLuint GFXGLDevice::_createShaderProgram(const GFXShaderDesc* shader, uint32_t count)
 {
    std::vector<GLuint> glHandles;
 
@@ -183,7 +363,7 @@ GLuint _createShaderProgram(const GFXShaderDesc* shader, uint32_t count)
       GLenum shaderType = _getShaderType(shaderStage.type);
 
       GLuint handle = glCreateShader(shaderType);
-      glShaderSource(handle, 1, &shader.code, NULL);
+      glShaderSource(handle, 1, &shader->code, NULL);
       glCompileShader(handle);
       validateShaderCompilation(handle);
 

@@ -1,31 +1,40 @@
+#pragma once
+
+#include <stdint.h>
+#include <vector>
+
+#include "gfx/gfxTypes.h"
+
+enum class CommandType
+{
+   Viewport,
+   Scissor,
+
+   RasterizerState,
+   DepthState,
+   StencilState,
+   BlendState,
+   BindPipeline,
+
+   UpdatePushConstants,
+   BindDescriptorSets,
+   BindVertexBuffer,
+   BindVertexBuffers,
+   BindIndexBuffer,
+
+   DrawPrimitives,
+   DrawPrimitivesInstanced,
+   DrawIndexedPrimitives,
+   DrawIndexedPrimitivesInstanced,
+
+   End
+};
+
 class GFXCmdBuffer
 {
+   friend class GFXDevice;
+   friend class GFXGLDevice;
 private:
-    enum class CommandType
-    {
-        Viewport,
-        Scissor,
-
-        RasterizerState,
-        DepthState,
-        StencilState,
-        BlendState,
-        BindPipeline,
-
-        UpdatePushConstants,
-        BindDescriptorSets,
-        BindVertexBuffer,
-        BindVertexBuffers,
-        BindIndexBuffer,
-
-        DrawPrimitives,
-        DrawPrimitivesInstanced,
-        DrawIndexedPrimitives,
-        DrawIndexedPrimitivesInstanced,
-
-        End
-    };
-
     enum
     {
         COMMAND_BUFFER_SIZE = 4096*4,
@@ -72,8 +81,8 @@ private:
     size_t offset;
     
 public:
-    void begin();
-    void end();
+    virtual void begin();
+    virtual void end();
 
     void setViewport(int x, int y, int width, int height);
     void setScissor(int x, int y, int width, int height);
