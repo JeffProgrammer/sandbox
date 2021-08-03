@@ -43,17 +43,9 @@ void GFXCmdBuffer::setRasterizerState(const StateBlockHandle handle)
     cmdBuffer[offset++] = handle;
 }
 
-void GFXCmdBuffer::setDepthState(const StateBlockHandle handle)
+void GFXCmdBuffer::setDepthStencilState(const StateBlockHandle handle)
 {
-    int type = (int)CommandType::DepthState;
-    cmdBuffer[offset++] = type;
-
-    cmdBuffer[offset++] = handle;
-}
-
-void GFXCmdBuffer::setStencilState(const StateBlockHandle handle)
-{
-    int type = (int)CommandType::StencilState;
+    int type = (int)CommandType::DepthStencilState;
     cmdBuffer[offset++] = type;
 
     cmdBuffer[offset++] = handle;

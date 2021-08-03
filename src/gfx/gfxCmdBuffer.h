@@ -11,8 +11,7 @@ enum class CommandType
    Scissor,
 
    RasterizerState,
-   DepthState,
-   StencilState,
+   DepthStencilState,
    BlendState,
    BindPipeline,
 
@@ -38,7 +37,7 @@ private:
     enum
     {
         COMMAND_BUFFER_SIZE = 4096*4,
-        MAX_PUSH_CONSTANT_SIZE_IN_BYTES = 256
+        MAX_PUSH_CONSTANT_SIZE_IN_BYTES = 256,
     };
 
     struct PushConstant
@@ -63,7 +62,13 @@ private:
         PushConstant constant;
         constant.offset = offset;
         constant.size = size;
-        memcpy(constant.data, data, size);
+        memcpy(constant.data, (char*)data, size);
+
+        // Must be divisible by PUSH_CONSTANT_STRIDE is 16
+        if (size % 16) { // PUSH_CONSTANT_STRIDE is 16
+           // if validation...warn?
+           abort();
+        }
 
         if (pushConstantOffset < pushConstantPool.size())
         {
@@ -87,8 +92,7 @@ public:
     void setViewport(int x, int y, int width, int height);
     void setScissor(int x, int y, int width, int height);
     void setRasterizerState(const StateBlockHandle handle);
-    void setDepthState(const StateBlockHandle handle);
-    void setStencilState(const StateBlockHandle handle);
+    void setDepthStencilState(const StateBlockHandle handle);
     void setBlendState(const StateBlockHandle handle);
 
     void bindPipeline(PipelineHandle handle);

@@ -2,7 +2,6 @@
 
 typedef unsigned int BufferHandle;
 typedef unsigned int PipelineHandle;
-typedef unsigned int PipelineHandle;
 typedef unsigned int StateBlockHandle;
 typedef unsigned int TextureHandle;
 
@@ -77,10 +76,10 @@ enum class GFXCompareFunc
 {
    EQUAL,
    NEQUAL,
+   LESS,
+   GREATER,
    LEQUAL,
    GEQUAL,
-   LTEQUAL,
-   GREQUAL,
    NEVER,
    ALWAYS
 };
@@ -90,8 +89,8 @@ enum class GFXStencilFunc
    KEEP,
    ZERO,
    REPLACE,
-   INCRSAT,
-   DECRSAT,
+   INCR_WRAP,
+   DECR_WRAP,
    INVERT,
    INCR,
    DECR
@@ -110,6 +109,12 @@ enum class CullMode
    CULL_FRONT
 };
 
+enum class WindingMode
+{
+   CLOCKWISE,
+   COUNTER_CLOCKWISE
+};
+
 // devices
 
 struct GFXBufferDesc
@@ -126,35 +131,32 @@ struct GFXBlendStateDesc
 
 };
 
-struct GFXDepthStateDesc
+struct GFXDepthStencilStateDesc
 {
-   bool depthTest;
-   bool depthWrite;
-   GFXCompareFunc depthFunc;
-};
+   struct GFXStencilDescriptor
+   {
+      GFXStencilFunc stencilPassFunc;
+      GFXStencilFunc stencilFailFunc;
+      GFXStencilFunc depthPassFunc;
+      GFXStencilFunc depthFailFunc;
 
-struct GFXStencilStateDesc
-{
-   bool stencilTest;
-   GFXStencilFunc stencilFailOp;
-   GFXStencilFunc stencilZFailOp;
-   GFXStencilFunc stencilPassOp;
-   GFXCompareFunc stencilFunc;
-   uint32_t stencilRef;
-   uint32_t stencilMask;
-   uint32_t stencilWriteMask;
+      uint32_t stencilReadMask;
+      uint32_t stencilWriteMask;
+   };
+
+   GFXCompareFunc depthCompareFunc;
+   bool enableDepthTest;
+
+   GFXStencilDescriptor frontFaceStencil;
+   GFXStencilDescriptor backFaceStencil;
 };
 
 struct GFXRasterizerStateDesc
 {
    bool enableRasterizer;
-   bool frontCounterClockwise;
-   bool enableScissorTest;
-   bool enableDepthClipTest;
+   WindingMode windingMode;
    FillMode fillMode;
    CullMode cullMode;
-   int depthBias;
-   float depthBiasClamp;
 };
 
 struct GFXInputLayoutElementDesc

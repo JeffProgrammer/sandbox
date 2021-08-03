@@ -13,6 +13,11 @@ public:
    virtual PipelineHandle createPipeline(const GFXPipelineDesc& desc) = 0;
    virtual void deletePipeline(PipelineHandle handle) = 0;
 
+   virtual StateBlockHandle createRasterizerState(const GFXRasterizerStateDesc& desc) = 0;
+   virtual StateBlockHandle createDepthStencilState(const GFXDepthStencilStateDesc& desc) = 0;
+   virtual StateBlockHandle createBlendState(const GFXBlendStateDesc& desc) = 0;
+   virtual void deleteStateBlock(StateBlockHandle handle) = 0;
+
    virtual void* mapBuffer(BufferHandle handle) = 0;
    virtual void unmapBuffer(BufferHandle handle) = 0;
 

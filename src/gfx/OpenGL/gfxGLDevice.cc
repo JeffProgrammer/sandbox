@@ -80,7 +80,6 @@ PipelineHandle GFXGLDevice::createPipeline(const GFXPipelineDesc& desc)
 
    PipelineHandle returnHandle = mPipelineHandleCounter++;
    mPipelines[returnHandle] = pipelineState;
-
    return returnHandle;
 }
 
@@ -100,6 +99,68 @@ void GFXGLDevice::deletePipeline(PipelineHandle handle)
       assert(false);
    }
 #endif
+}
+
+StateBlockHandle GFXGLDevice::createRasterizerState(const GFXRasterizerStateDesc& desc)
+{
+   GLRasterizerState state;
+
+   switch (desc.cullMode)
+   {
+   case CullMode::CULL_NONE:
+      state.enableFaceCulling = false;
+      state.cullMode = GL_NONE;
+      break;
+   case CullMode::CULL_BACK:
+      state.enableFaceCulling = true;
+      state.cullMode = GL_BACK;
+      break;
+   default:
+      state.enableFaceCulling = true;
+      state.cullMode = GL_FRONT;
+   }
+
+   state.windingOrder = desc.windingMode == WindingMode::CLOCKWISE ? GL_CW : GL_CCW;
+   state.polygonFillMode = desc.fillMode == FillMode::SOLID ? GL_FILL : GL_LINE;
+
+   StateBlockHandle handle = mRasterizerHandleCounter++;
+   mRasterizerStates[handle] = std::move(state);
+   return handle;
+}
+
+StateBlockHandle GFXGLDevice::createDepthStencilState(const GFXDepthStencilStateDesc& desc)
+{
+   GLDepthStencilState state;
+   state.enableDepthTest = desc.enableDepthTest;
+   state.depthCompareFunc = _getCompareFunc(desc.depthCompareFunc);
+
+   state.frontFaceStencil.depthFailFunc = _getStencilFunc(desc.frontFaceStencil.depthFailFunc);
+   state.frontFaceStencil.depthPassFunc = _getStencilFunc(desc.frontFaceStencil.depthPassFunc);
+   state.frontFaceStencil.stencilFailFunc = _getStencilFunc(desc.frontFaceStencil.stencilFailFunc);
+   state.frontFaceStencil.stencilPassFunc = _getStencilFunc(desc.frontFaceStencil.stencilPassFunc);
+   state.frontFaceStencil.stencilReadMask = desc.frontFaceStencil.stencilReadMask;
+   state.frontFaceStencil.stencilWriteMask = desc.frontFaceStencil.stencilWriteMask;
+
+   state.backFaceStencil.depthFailFunc = _getStencilFunc(desc.backFaceStencil.depthFailFunc);
+   state.backFaceStencil.depthPassFunc = _getStencilFunc(desc.backFaceStencil.depthPassFunc);
+   state.backFaceStencil.stencilFailFunc = _getStencilFunc(desc.backFaceStencil.stencilFailFunc);
+   state.backFaceStencil.stencilPassFunc = _getStencilFunc(desc.backFaceStencil.stencilPassFunc);
+   state.backFaceStencil.stencilReadMask = desc.backFaceStencil.stencilReadMask;
+   state.backFaceStencil.stencilWriteMask = desc.backFaceStencil.stencilWriteMask;
+
+   StateBlockHandle handle = mDepthStencilStateHandleCounter++;
+   mDepthStencilStates[handle] = state;
+   return handle;
+}
+
+StateBlockHandle GFXGLDevice::createBlendState(const GFXBlendStateDesc& desc)
+{
+   return 0;
+}
+
+void GFXGLDevice::deleteStateBlock(StateBlockHandle handle)
+{
+
 }
 
 void* GFXGLDevice::mapBuffer(BufferHandle handle)
@@ -147,16 +208,28 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
 
          case CommandType::RasterizerState:
          {
+            int handle = cmdBuffer[offset++];
+            const GLRasterizerState& rasterState = mRasterizerStates[handle];
+
+            if (rasterState.enableFaceCulling)
+            {
+               glEnable(GL_CULL_FACE);
+               glCullFace(rasterState.cullMode);
+               glFrontFace(rasterState.windingOrder);
+            }
+            else
+            {
+               glDisable(GL_CULL_FACE);
+            }
+
+            glPolygonMode(GL_FRONT_AND_BACK, rasterState.polygonFillMode);
+
             break;
          }
 
-         case CommandType::DepthState:
+         case CommandType::DepthStencilState:
          {
-            break;
-         }
-
-         case CommandType::StencilState:
-         {
+            
             break;
          }
 
@@ -180,7 +253,15 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
 
          case CommandType::UpdatePushConstants:
          {
+            // for now assume offset is always 0... TODO: keep a copy in ram
+            // and then upload everything (or just update changes if possible?)
 
+
+            const int pushConstantLookupId = cmdBuffer[offset++];
+            const GFXCmdBuffer::PushConstant& pushC = cmd->pushConstantPool[pushConstantLookupId];
+            const int count = pushC.size / PUSH_CONSTANT_STRIDE;
+
+            glUniform4fv(mState.pushConstantLocation, count, (const GLfloat*)&pushC.data[0]);
             break;
          }
 
@@ -303,6 +384,7 @@ GLenum GFXGLDevice::_getBufferUsage(BufferUsageEnum usage) const
       return GL_DYNAMIC_DRAW;
    }
 
+   // error
    return 0;
 }
 
@@ -318,6 +400,7 @@ GLenum GFXGLDevice::_getBufferType(BufferType type) const
       return GL_UNIFORM_BUFFER;
    }
 
+   // error
    return 0;
 }
 
@@ -337,6 +420,59 @@ GLenum GFXGLDevice::_getPrimitiveType(PrimitiveType primitiveType) const
       return GL_LINE_STRIP;
    }
 
+   // error
+   return 0;
+}
+
+GLenum GFXGLDevice::_getStencilFunc(GFXStencilFunc func) const
+{
+   switch (func)
+   {
+   case GFXStencilFunc::KEEP:
+      return GL_KEEP;
+   case GFXStencilFunc::ZERO:
+      return GL_ZERO;
+   case GFXStencilFunc::REPLACE:
+      return GL_REPLACE;
+   case GFXStencilFunc::INCR_WRAP:
+      return GL_INCR_WRAP;
+   case GFXStencilFunc::DECR_WRAP:
+      return GL_DECR_WRAP;
+   case GFXStencilFunc::INVERT:
+      return GL_INVERT;
+   case GFXStencilFunc::INCR:
+      return GL_INCR;
+   case GFXStencilFunc::DECR:
+      return GL_DECR;
+   }
+
+   // error
+   return 0;
+}
+
+GLenum GFXGLDevice::_getCompareFunc(GFXCompareFunc func) const
+{
+   switch (func)
+   {
+   case GFXCompareFunc::EQUAL:
+      return GL_EQUAL;
+   case GFXCompareFunc::NEQUAL:
+      return GL_NOTEQUAL;
+   case GFXCompareFunc::LESS:
+      return GL_LESS;
+   case GFXCompareFunc::GREATER:
+      return GL_GREATER;
+   case GFXCompareFunc::LEQUAL:
+      return GL_LEQUAL;
+   case GFXCompareFunc::GEQUAL:
+      return GL_GEQUAL;
+   case GFXCompareFunc::ALWAYS:
+      return GL_ALWAYS;
+   case GFXCompareFunc::NEVER:
+      return GL_NEVER;
+   }
+
+   // error
    return 0;
 }
 
@@ -350,6 +486,7 @@ GLenum GFXGLDevice::_getShaderType(GFXShaderType type) const
       return GL_FRAGMENT_SHADER;
    }
 
+   // error
    return 0;
 }
 
