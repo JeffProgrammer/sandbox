@@ -33,6 +33,7 @@ class GFXCmdBuffer
 {
    friend class GFXDevice;
    friend class GFXGLDevice;
+   friend class GFXMetalDevice;
 private:
     enum
     {

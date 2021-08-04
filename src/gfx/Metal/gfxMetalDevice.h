@@ -1,10 +1,14 @@
 #pragma once
 
+#import <Metal/Metal.h>
 #include "gfx/gfxDevice.h"
 
 class GFXMetalDevice : public GFXDevice
 {
+   id<MTLDevice> mDevice;
 public:
+   GFXMetalDevice();
+   
    virtual BufferHandle createBuffer(const GFXBufferDesc& desc) override;
    virtual void deleteBuffer(BufferHandle handle) override;
 

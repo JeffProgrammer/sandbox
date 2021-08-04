@@ -135,7 +135,7 @@ struct GFXDepthStencilStateDesc
 {
    struct GFXStencilDescriptor
    {
-      GFXStencilFunc stencilPassFunc;
+      GFXCompareFunc stencilCompareOp;
       GFXStencilFunc stencilFailFunc;
       GFXStencilFunc depthPassFunc;
       GFXStencilFunc depthFailFunc;
