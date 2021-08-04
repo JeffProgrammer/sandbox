@@ -48,16 +48,6 @@ set(SANDBOX_SRC
     src/gfx/gfxDevice.cc
     src/gfx/gfxTypes.h
 
-    src/gfx/OpenGL/gfxGLCmdBuffer.h
-    src/gfx/OpenGL/gfxGLCmdBuffer.cc
-    src/gfx/OpenGL/gfxGLDevice.h
-    src/gfx/OpenGL/gfxGLDevice.cc
-
-    src/gl/gpuProfiler.h
-    src/gl/gpuProfiler.cc
-    src/gl/shader.h
-    src/gl/shader.cc
-
     src/app.h
     src/app.cc
     src/main.cc
@@ -65,6 +55,29 @@ set(SANDBOX_SRC
     src/apps/main/mainApp.h
     src/apps/main/mainApp.cc
 )
+
+if (APPLE)
+    set(SANDBOX_SRC
+        ${SANDBOX_SRC}
+
+        src/gfx/Metal/gfxMetalDevice.h
+        src/gfx/Metal/gfxMetalDevice.mm
+    )
+else()
+    set(SANDBOX_SRC
+        ${SANDBOX_SRC}
+
+        src/gl/gpuProfiler.h
+        src/gl/gpuProfiler.cc
+        src/gl/shader.h
+        src/gl/shader.cc
+
+        src/gfx/OpenGL/gfxGLCmdBuffer.h
+        src/gfx/OpenGL/gfxGLCmdBuffer.cc
+        src/gfx/OpenGL/gfxGLDevice.h
+        src/gfx/OpenGL/gfxGLDevice.cc
+    )
+endif()
 
 add_app(01_Hello_Cubes 02_Cpu_Particles 03_Draw_Performance 04_Forward_Rendering)
 
@@ -83,19 +96,20 @@ elseif (XCODE)
     )
 endif()
 
-# OpenGL Library
 if (APPLE)
-    target_link_libraries(sandbox "-framework OpenGL")
+    target_link_libraries(sandbox "-framework Metal")
 elseif (WIN32)
     target_link_libraries(sandbox OpenGL32)
 elseif (UNIX)
     target_link_libraries(sandbox GL)
 endif()
 
+if (NOT APPLE)
+    include_directories(thirdparty/glad/include)
+endif()
 include_directories(
     thirdparty/glfw/include
     thirdparty/glm
-    thirdparty/glad/include
     thirdparty/imgui
 )
 
@@ -104,3 +118,9 @@ add_definitions(
     -DGLFW_INCLUDE_NONE
     -DIMGUI_IMPL_OPENGL_LOADER_GLAD
 )
+
+if (APPLE)
+    add_definitions(-DGFX_METAL)
+else()
+    add_definitions(-DGFX_OPENGL)
+endif()
