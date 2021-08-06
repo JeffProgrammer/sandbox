@@ -18,7 +18,7 @@ public:
    virtual StateBlockHandle createBlendState(const GFXBlendStateDesc& desc) = 0;
    virtual void deleteStateBlock(StateBlockHandle handle) = 0;
 
-   virtual void* mapBuffer(BufferHandle handle) = 0;
+   virtual void* mapBuffer(BufferHandle handle, uint32_t offset, uint32_t size) = 0;
    virtual void unmapBuffer(BufferHandle handle) = 0;
 
    virtual void executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count) = 0;

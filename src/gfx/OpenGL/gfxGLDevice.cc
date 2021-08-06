@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "gfx/OpenGL/gfxGLDevice.h"
 
 static void validateShaderCompilation(GLuint shader)
@@ -75,6 +76,18 @@ PipelineHandle GFXGLDevice::createPipeline(const GFXPipelineDesc& desc)
    glGenVertexArrays(1, &pipelineState.vaoHandle);
    glBindVertexArray(pipelineState.vaoHandle);
 
+   // see examples here: https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_vertex_attrib_binding.txt
+   for (int i = 0; i < desc.inputLayout.count; i++)
+   {
+      // Note: semantic name is our slot (for DX compatible purposes?)
+      const GFXInputLayoutElementDesc& attribute = desc.inputLayout.descs[i];
+      GLuint slot = (GLuint)attribute.semanticName;
+
+      glVertexAttribFormat(slot, attribute.count, _getInputLayoutType(attribute.type), GL_FALSE, attribute.offset);
+      glVertexAttribBinding(slot, attribute.bufferBinding);
+      glVertexBindingDivisor(slot, attribute.divisor == InputLayoutDivisor::PER_VERTEX ? 0 : 1);
+   }
+
    pipelineState.primitiveType = _getPrimitiveType(desc.primitiveType);
    pipelineState.shader = _createShaderProgram(desc.shadersStages, desc.shaderStageCount); 
 
@@ -137,16 +150,18 @@ StateBlockHandle GFXGLDevice::createDepthStencilState(const GFXDepthStencilState
    state.frontFaceStencil.depthFailFunc = _getStencilFunc(desc.frontFaceStencil.depthFailFunc);
    state.frontFaceStencil.depthPassFunc = _getStencilFunc(desc.frontFaceStencil.depthPassFunc);
    state.frontFaceStencil.stencilFailFunc = _getStencilFunc(desc.frontFaceStencil.stencilFailFunc);
-   state.frontFaceStencil.stencilPassFunc = _getStencilFunc(desc.frontFaceStencil.stencilPassFunc);
+   state.frontFaceStencil.stencilCompareOp = _getCompareFunc(desc.frontFaceStencil.stencilCompareOp);
    state.frontFaceStencil.stencilReadMask = desc.frontFaceStencil.stencilReadMask;
    state.frontFaceStencil.stencilWriteMask = desc.frontFaceStencil.stencilWriteMask;
+   state.frontFaceStencil.referenceValue = desc.frontFaceStencil.referenceValue;
 
    state.backFaceStencil.depthFailFunc = _getStencilFunc(desc.backFaceStencil.depthFailFunc);
    state.backFaceStencil.depthPassFunc = _getStencilFunc(desc.backFaceStencil.depthPassFunc);
    state.backFaceStencil.stencilFailFunc = _getStencilFunc(desc.backFaceStencil.stencilFailFunc);
-   state.backFaceStencil.stencilPassFunc = _getStencilFunc(desc.backFaceStencil.stencilPassFunc);
+   state.backFaceStencil.stencilCompareOp = _getCompareFunc(desc.backFaceStencil.stencilCompareOp);
    state.backFaceStencil.stencilReadMask = desc.backFaceStencil.stencilReadMask;
    state.backFaceStencil.stencilWriteMask = desc.backFaceStencil.stencilWriteMask;
+   state.backFaceStencil.referenceValue = desc.backFaceStencil.referenceValue;
 
    StateBlockHandle handle = mDepthStencilStateHandleCounter++;
    mDepthStencilStates[handle] = state;
@@ -155,23 +170,49 @@ StateBlockHandle GFXGLDevice::createDepthStencilState(const GFXDepthStencilState
 
 StateBlockHandle GFXGLDevice::createBlendState(const GFXBlendStateDesc& desc)
 {
+   assert(false && "GFXGLDevice::createBlendState() is not implemented");
    return 0;
 }
 
 void GFXGLDevice::deleteStateBlock(StateBlockHandle handle)
 {
-
+   assert(false && "GFXGLDevice::deleteStateBlock() is not implemented");
 }
 
-void* GFXGLDevice::mapBuffer(BufferHandle handle)
+void* GFXGLDevice::mapBuffer(BufferHandle handle, uint32_t offset, uint32_t size)
 {
-   return nullptr;
+   // At the moment, this is a REALLY SLOW WAY TO UPDATE A BUFFER. We can do _A TON_ of optimizations here
+   // For example, with small buffers on certain venders and buffer types (eg. nvidia ubos) we should
+   // always use glBufferSubData.
+   //
+   // For modern drivers (GL_ARB_BUFFER_STORAGE) we should use persistent mapping if the buffer is going to
+   // be updated all the time.
+   //
+   // We should also double or tripple buffer if we can (unless the buffer is ENORMOUS)
+   //
+   // For an ES2.0 fallback for 2d, we always want to use glBufferSubData() as map buffer isn't a thing!
+
+   const GLBuffer buffer = mBuffers[handle];
+   glBindBuffer(buffer.type, buffer.buffer);
+
+   mState.currentMappedBuffer = buffer.buffer;
+   mState.currentMappedBufferType = buffer.type;
+
+   return glMapBufferRange(buffer.type, offset, size, GL_MAP_WRITE_BIT);
 }
 
 void GFXGLDevice::unmapBuffer(BufferHandle handle)
 {
-   //const auto& found = mBuffers.find(handle);
-   //glUnmapBuffer(found->second.type);
+   const GLBuffer buffer = mBuffers[handle];
+   if (mState.currentMappedBuffer != buffer.buffer || mState.currentMappedBufferType != buffer.type)
+   {
+      // Optimization: Bind before use if we're not modifying the same buffer
+      glBindBuffer(buffer.type, buffer.buffer);
+   }
+
+   glUnmapBuffer(buffer.type);
+   mState.currentMappedBuffer = 0;
+   mState.currentMappedBufferType = 0;
 }
 
 void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
@@ -229,7 +270,61 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
 
          case CommandType::DepthStencilState:
          {
-            
+            int handle = cmdBuffer[offset++];
+            const GLDepthStencilState& depthStencil = mDepthStencilStates[handle];
+
+            // Depth Settings
+            if (depthStencil.enableDepthTest)
+            {
+               glEnable(GL_DEPTH_TEST);
+               glDepthFunc(depthStencil.depthCompareFunc);
+            }
+            else
+            {
+               glDisable(GL_DEPTH_TEST);
+            }
+            glDepthMask(depthStencil.enableDepthWrite);
+
+            // Stencil Settings
+            if (depthStencil.enableStencilTest)
+            {
+               // TODO: readMask?
+
+               glEnable(GL_STENCIL_TEST);
+
+               glStencilFuncSeparate(
+                  GL_FRONT, 
+                  depthStencil.frontFaceStencil.stencilCompareOp, 
+                  depthStencil.frontFaceStencil.referenceValue, 
+                  depthStencil.frontFaceStencil.stencilWriteMask
+               );
+
+               glStencilFuncSeparate(
+                  GL_BACK,
+                  depthStencil.backFaceStencil.stencilCompareOp,
+                  depthStencil.backFaceStencil.referenceValue,
+                  depthStencil.backFaceStencil.stencilWriteMask
+               );
+
+               glStencilOpSeparate(
+                  GL_FRONT,
+                  depthStencil.frontFaceStencil.stencilFailFunc,
+                  depthStencil.frontFaceStencil.depthFailFunc,
+                  depthStencil.frontFaceStencil.depthPassFunc
+               );
+
+               glStencilOpSeparate(
+                  GL_BACK,
+                  depthStencil.backFaceStencil.stencilFailFunc,
+                  depthStencil.backFaceStencil.depthFailFunc,
+                  depthStencil.backFaceStencil.depthPassFunc
+               );
+            }
+            else
+            {
+               glDisable(GL_STENCIL_TEST);
+            }
+
             break;
          }
 
@@ -276,9 +371,9 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
             GLuint bindingSlot = cmdBuffer[offset++];
             GLuint buffer = mBuffers[cmdBuffer[offset++]].buffer;
             GLsizei stride = static_cast<GLsizei>(cmdBuffer[offset++]);
-            GLintptr offset = static_cast<GLintptr>(cmdBuffer[offset++]);
+            GLintptr bufferOffset = static_cast<GLintptr>(cmdBuffer[offset++]);
 
-            glBindVertexBuffer(bindingSlot, buffer, offset, stride);
+            glBindVertexBuffer(bindingSlot, buffer, bufferOffset, stride);
             break;
          }
 
@@ -378,9 +473,9 @@ GLenum GFXGLDevice::_getBufferUsage(BufferUsageEnum usage) const
 {
    switch (usage)
    {
-   case BufferUsageEnum::STATIC_DRAW: 
+   case BufferUsageEnum::STATIC_GPU_ONLY: 
       return GL_STATIC_DRAW;
-   case BufferUsageEnum::DYNAMIC_DRAW: 
+   case BufferUsageEnum::DYNAMIC_CPU_TO_GPU: 
       return GL_DYNAMIC_DRAW;
    }
 
@@ -484,6 +579,24 @@ GLenum GFXGLDevice::_getShaderType(GFXShaderType type) const
       return GL_VERTEX_SHADER;
    case GFXShaderType::FRAGMENT:
       return GL_FRAGMENT_SHADER;
+   }
+
+   // error
+   return 0;
+}
+
+GLenum GFXGLDevice::_getInputLayoutType(InputLayoutFormat format) const
+{
+   switch (format)
+   {
+   case InputLayoutFormat::FLOAT:
+      return GL_FLOAT;
+   case InputLayoutFormat::BYTE:
+      return GL_BYTE;
+   case InputLayoutFormat::SHORT:
+      return GL_SHORT;
+   case InputLayoutFormat::INT:
+      return GL_INT;
    }
 
    // error

@@ -40,17 +40,20 @@ class GFXGLDevice : public GFXDevice
    {
       struct GLStencilState
       {
-         GLenum stencilPassFunc;
+         GLenum stencilCompareOp;
          GLenum stencilFailFunc;
          GLenum depthPassFunc;
          GLenum depthFailFunc;
 
-         uint32_t stencilReadMask;
+         uint32_t stencilReadMask; // when do we use this???
          uint32_t stencilWriteMask;
+         uint32_t referenceValue;
       };
 
       GLenum depthCompareFunc;
       bool enableDepthTest;
+      bool enableDepthWrite;
+      bool enableStencilTest;
 
       GLStencilState frontFaceStencil;
       GLStencilState backFaceStencil;
@@ -63,10 +66,12 @@ class GFXGLDevice : public GFXDevice
 
    struct
    {
-      GLuint primitiveType;
-      GLuint currentProgram;
-      GLenum indexBufferType;
-      GLuint pushConstantLocation;
+      GLuint primitiveType = 0;
+      GLuint currentProgram = 0;
+      GLenum indexBufferType = 0;
+      GLuint pushConstantLocation = 0;
+      GLuint currentMappedBuffer = 0;
+      GLenum currentMappedBufferType = 0;
    } mState;
 
    struct
@@ -101,7 +106,7 @@ public:
    virtual StateBlockHandle createBlendState(const GFXBlendStateDesc& desc) override;
    virtual void deleteStateBlock(StateBlockHandle handle) override;
 
-   virtual void* mapBuffer(BufferHandle handle) override;
+   virtual void* mapBuffer(BufferHandle handle, uint32_t offset, uint32_t size) override;
    virtual void unmapBuffer(BufferHandle handle) override;
 
    virtual void executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count) override;
@@ -113,5 +118,6 @@ private:
    GLenum _getStencilFunc(GFXStencilFunc func) const;
    GLenum _getCompareFunc(GFXCompareFunc func) const;
    GLenum _getShaderType(GFXShaderType shaderType) const;
+   GLenum _getInputLayoutType(InputLayoutFormat format) const;
    GLuint _createShaderProgram(const GFXShaderDesc* shader, uint32_t count);
 };

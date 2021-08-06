@@ -7,8 +7,8 @@ typedef unsigned int TextureHandle;
 
 enum class BufferUsageEnum
 {
-   STATIC_DRAW,
-   DYNAMIC_DRAW
+   STATIC_GPU_ONLY,
+   DYNAMIC_CPU_TO_GPU,
 };
 
 enum class BufferType
@@ -24,10 +24,9 @@ enum class GFXIndexBufferType
    BITS_32
 };
 
-enum BufferAccessFlags
+enum BufferAccessFlags : uint32_t
 {
-
-   PERSISTENT_MAPPED
+   NONE
 };
 
 enum class PrimitiveType
@@ -51,13 +50,10 @@ enum class InputLayoutSemanticName
 
 enum class InputLayoutFormat
 {
-   FLOAT1,
-   FLOAT2,
-   FLOAT3,
-   FLOAT4,
-   UNSIGNED_BYTE,
-   UNSIGNED_SHORT,
-   UNSIGNED_INT
+   FLOAT,
+   BYTE,
+   SHORT,
+   INT
 };
 
 enum class GFXShaderType
@@ -66,7 +62,7 @@ enum class GFXShaderType
    FRAGMENT
 };
 
-enum class InputLayoutClassification
+enum class InputLayoutDivisor
 {
    PER_VERTEX,
    PER_INSTANCE
@@ -142,10 +138,13 @@ struct GFXDepthStencilStateDesc
 
       uint32_t stencilReadMask;
       uint32_t stencilWriteMask;
+      uint32_t referenceValue;
    };
 
    GFXCompareFunc depthCompareFunc;
    bool enableDepthTest;
+   bool enableDepthWrite;
+   bool enableStencilTest;
 
    GFXStencilDescriptor frontFaceStencil;
    GFXStencilDescriptor backFaceStencil;
@@ -153,7 +152,6 @@ struct GFXDepthStencilStateDesc
 
 struct GFXRasterizerStateDesc
 {
-   bool enableRasterizer;
    WindingMode windingMode;
    FillMode fillMode;
    CullMode cullMode;
@@ -162,11 +160,11 @@ struct GFXRasterizerStateDesc
 struct GFXInputLayoutElementDesc
 {
    InputLayoutSemanticName semanticName;
-   InputLayoutFormat format;
-   InputLayoutClassification classification;
-   uint32_t slot;
+   InputLayoutFormat type;
+   InputLayoutDivisor divisor;
+   uint32_t bufferBinding;
    uint32_t offset;
-   uint32_t stride;
+   uint32_t count;
 };
 
 struct GFXInputLayoutDesc
