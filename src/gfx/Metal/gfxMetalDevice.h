@@ -6,6 +6,12 @@
 class GFXMetalDevice : public GFXDevice
 {
    id<MTLDevice> mDevice;
+   id<MTLCommandQueue> mCommandQueue;
+   
+   struct
+   {
+      bool hasUnifiedMemory;
+   } mCaps;
 public:
    GFXMetalDevice();
    

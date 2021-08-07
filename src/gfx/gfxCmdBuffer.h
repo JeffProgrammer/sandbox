@@ -37,21 +37,28 @@ class GFXCmdBuffer
 private:
     enum
     {
-        COMMAND_BUFFER_SIZE = 4096*4,
-        MAX_PUSH_CONSTANT_SIZE_IN_BYTES = 256,
+        COMMAND_BUFFER_SIZE = 16384,
+       
+        // Note: The min spec for Vulkan is 128 bytes so we should
+        // assume no more than this is supported. If we have a REALLY
+        // good usecase for allowing more, we have to take this into consideration.
+        MAX_PUSH_CONSTANT_SIZE_IN_BYTES = 128,
+       
+        PUSH_BUFFER_CONSTANT_STRIDE = 16, // same as PUSH_CONSTANT_STRIDE
     };
 
     struct PushConstant
     {
         int offset;
         int size;
+        GFXShaderStageBit shaderStageBits;
         char data[MAX_PUSH_CONSTANT_SIZE_IN_BYTES];
     };
 
     std::vector<PushConstant> pushConstantPool;
     int pushConstantOffset;
 
-    int allocPushConstant(uint32_t offset, uint32_t size, const void* data)
+    int allocPushConstant(uint32_t offset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data)
     {
         if (size > MAX_PUSH_CONSTANT_SIZE_IN_BYTES) 
         {
@@ -63,10 +70,10 @@ private:
         PushConstant constant;
         constant.offset = offset;
         constant.size = size;
+        constant.shaderStageBits = shaderStageBits;
         memcpy(constant.data, (char*)data, size);
 
-        // Must be divisible by PUSH_CONSTANT_STRIDE is 16
-        if (size % 16) { // PUSH_CONSTANT_STRIDE is 16
+        if (size % PUSH_BUFFER_CONSTANT_STRIDE) {
            // if validation...warn?
            abort();
         }
@@ -98,7 +105,7 @@ public:
 
     void bindPipeline(PipelineHandle handle);
 
-    void updatePushConstants(uint32_t offset, uint32_t size, const void* data);
+    void updatePushConstants(uint32_t offset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data);
     //void bindDescriptorSets(/* TODO: parameters */);
     void bindVertexBuffer(uint32_t bindingSlot, BufferHandle buffer, uint32_t stride, uint32_t offset);
     void bindVertexBuffers(uint32_t startBindingSlot, uint32_t count, const BufferHandle *buffers, const uint32_t* strides, const uint32_t* offsets);

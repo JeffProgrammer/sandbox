@@ -64,6 +64,9 @@ GFXMetalDevice::GFXMetalDevice()
 {
    // TODO: Have to hook this up to the window...pass window handle into the GFX layer...
    mDevice = MTLCreateSystemDefaultDevice();
+   mCommandQueue = [mDevice newCommandQueue];
+   
+   mCaps.hasUnifiedMemory = [mDevice hasUnifiedMemory];
 }
 
 BufferHandle GFXMetalDevice::createBuffer(const GFXBufferDesc& desc)
@@ -72,7 +75,8 @@ BufferHandle GFXMetalDevice::createBuffer(const GFXBufferDesc& desc)
    NSUInteger bytes = desc.sizeInBytes;
    NSUInteger options = 0;
    
-   if (desc.usage == BufferUsageEnum::STATIC_DRAW)
+
+   if (!mCaps.hasUnifiedMemory && desc.usage == BufferUsageEnum::STATIC_GPU_ONLY)
       options |= MTLResourceStorageModePrivate;
    else
       options |= MTLResourceStorageModeShared;
@@ -88,7 +92,7 @@ BufferHandle GFXMetalDevice::createBuffer(const GFXBufferDesc& desc)
 
 void GFXMetalDevice::deleteBuffer(BufferHandle handle)
 {
-   
+
 }
 
 PipelineHandle GFXMetalDevice::createPipeline(const GFXPipelineDesc& desc)
@@ -150,96 +154,137 @@ void GFXMetalDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int coun
    // translation on the fly every cmd buffer during the submit, but this could be potentially
    // quite a performance improvement to not do it here.
    
+   id<MTLCommandBuffer> commandBuffer = [mCommandQueue commandBuffer];
+   
    for (int i = 0; i < count; i++)
    {
       const GFXCmdBuffer* cmd = cmdBuffers[i];
       const uint32_t* cmdBuffer = cmd->cmdBuffer;
       size_t offset = 0;
       
-      switch ((CommandType)cmdBuffer[offset++])
+      MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+      id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+      
+      for (;;)
       {
-      case CommandType::Viewport:
-      {
-         break;
-      }
-         
-      case CommandType::Scissor:
-      {
-         break;
-      }
-         
-      case CommandType::RasterizerState:
-      {
-         break;
-      }
-         
-      case CommandType::DepthStencilState:
-      {
-         break;
-      }
-         
-      case CommandType::BlendState:
-      {
-         break;
-      }
-         
-      case CommandType::BindPipeline:
-      {
-         break;
-      }
+         switch ((CommandType)cmdBuffer[offset++])
+         {
+         case CommandType::Viewport:
+         {
+            MTLViewport viewport;
+            viewport.originX = cmdBuffer[offset++];
+            viewport.originY = cmdBuffer[offset++];
+            viewport.width = cmdBuffer[offset++];
+            viewport.height = cmdBuffer[offset++];
+            viewport.znear = 0.0f;
+            viewport.zfar = 1.0f;
+            [renderEncoder setViewport:viewport];
+            break;
+         }
+            
+         case CommandType::Scissor:
+         {
+            MTLScissorRect scissor;
+            scissor.x = cmdBuffer[offset++];
+            scissor.y = cmdBuffer[offset++];
+            scissor.width = cmdBuffer[offset++];
+            scissor.height = cmdBuffer[offset++];
+            
+            [renderEncoder setScissorRect:scissor];
+            break;
+         }
+            
+         case CommandType::RasterizerState:
+         {
+            break;
+         }
+            
+         case CommandType::DepthStencilState:
+         {
+            break;
+         }
+            
+         case CommandType::BlendState:
+         {
+            break;
+         }
+            
+         case CommandType::BindPipeline:
+         {
+            break;
+         }
 
-      case CommandType::UpdatePushConstants:
-      {
-         break;
-      }
-         
-      case CommandType::BindDescriptorSets:
-      {
-         break;
-      }
-         
-      case CommandType::BindVertexBuffer:
-      {
-         break;
-      }
-         
-      case CommandType::BindVertexBuffers:
-      {
-         break;
-      }
-         
-         
-      case CommandType::BindIndexBuffer:
-      {
-         break;
-      }
+         case CommandType::UpdatePushConstants:
+         {
+            const int pushConstantLookupId = cmdBuffer[offset++];
+            const GFXCmdBuffer::PushConstant& pushConstant = cmd->pushConstantPool[pushConstantLookupId];
+            
+            if (pushConstant.shaderStageBits & GFXShaderStageBit::VERTEX_BIT)
+            {
+               [renderEncoder setVertexBytes:pushConstant.data
+                  length:pushConstant.size
+                  atIndex:0
+               ];
+            }
+            
+            if (pushConstant.shaderStageBits & GFXShaderStageBit::FRAGMENT_BIT)
+            {
+               [renderEncoder setFragmentBytes:pushConstant.data
+                  length:pushConstant.size
+                  atIndex:0
+               ];
+            }
+            break;
+         }
+            
+         case CommandType::BindDescriptorSets:
+         {
+            break;
+         }
+            
+         case CommandType::BindVertexBuffer:
+         {
+            break;
+         }
+            
+         case CommandType::BindVertexBuffers:
+         {
+            break;
+         }
+            
+            
+         case CommandType::BindIndexBuffer:
+         {
+            break;
+         }
 
-      case CommandType::DrawPrimitives:
-      {
-         break;
-      }
-         
-      case CommandType::DrawPrimitivesInstanced:
-      {
-         break;
-      }
-         
-      case CommandType::DrawIndexedPrimitives:
-      {
-         break;
-      }
-         
-      case CommandType::DrawIndexedPrimitivesInstanced:
-      {
-         break;
-      }
+         case CommandType::DrawPrimitives:
+         {
+            break;
+         }
+            
+         case CommandType::DrawPrimitivesInstanced:
+         {
+            break;
+         }
+            
+         case CommandType::DrawIndexedPrimitives:
+         {
+            break;
+         }
+            
+         case CommandType::DrawIndexedPrimitivesInstanced:
+         {
+            break;
+         }
 
-      case CommandType::End:
-      {
-         goto done;
+         case CommandType::End:
+         {
+            goto done;
+         }
+         }
       }
-      }
+   done:
+      ;
    }
-done:
-   ;
 }

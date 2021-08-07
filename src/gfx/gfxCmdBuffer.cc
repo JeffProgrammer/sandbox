@@ -67,7 +67,7 @@ void GFXCmdBuffer::bindPipeline(PipelineHandle handle)
     cmdBuffer[offset++] = handle;
 }
 
-void GFXCmdBuffer::updatePushConstants(uint32_t offset, uint32_t size, const void* data)
+void GFXCmdBuffer::updatePushConstants(uint32_t offset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data)
 {
     int type = (int)CommandType::UpdatePushConstants;
     cmdBuffer[offset++] = type;

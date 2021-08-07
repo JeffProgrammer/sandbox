@@ -62,6 +62,12 @@ enum class GFXShaderType
    FRAGMENT
 };
 
+enum GFXShaderStageBit
+{
+   VERTEX_BIT = 1,
+   FRAGMENT_BIT = 1 << VERTEX_BIT
+};
+
 enum class InputLayoutDivisor
 {
    PER_VERTEX,
