@@ -74,9 +74,14 @@ class GFXGLDevice : public GFXDevice
       GLenum currentMappedBufferType = 0;
    } mState;
 
+   struct GLSampler
+   {
+      GLuint handle;
+   };
+
    struct
    {
-      bool mHasBindVertexBuffers;
+      bool hasMultiBind = true;
    } mCaps;
 
    std::unordered_map<BufferHandle, GLBuffer> mBuffers;
@@ -94,6 +99,9 @@ class GFXGLDevice : public GFXDevice
    std::unordered_map<StateBlockHandle, GLBlendState> mBlendState;
    int mBlendStateHandleCounter = 0;
 
+   std::unordered_map<SamplerHandle, GLSampler> mSamplers;
+   int mSamplerHandleCounter = 0;
+
 public:
    virtual BufferHandle createBuffer(const GFXBufferDesc& desc) override;
    virtual void deleteBuffer(BufferHandle handle) override;
@@ -105,6 +113,12 @@ public:
    virtual StateBlockHandle createDepthStencilState(const GFXDepthStencilStateDesc& desc) override;
    virtual StateBlockHandle createBlendState(const GFXBlendStateDesc& desc) override;
    virtual void deleteStateBlock(StateBlockHandle handle) override;
+
+   virtual SamplerHandle createSampler(const GFXSamplerStateDesc& desc) override;
+   virtual void deleteSampler(SamplerHandle handle) override;
+
+   virtual TextureHandle createTexture(const GFXTextureStateDesc& desc) override;
+   virtual void deleteTexture(TextureHandle handle) override;
 
    virtual void* mapBuffer(BufferHandle handle, uint32_t offset, uint32_t size) override;
    virtual void unmapBuffer(BufferHandle handle) override;
@@ -120,4 +134,9 @@ private:
    GLenum _getShaderType(GFXShaderType shaderType) const;
    GLenum _getInputLayoutType(InputLayoutFormat format) const;
    GLuint _createShaderProgram(const GFXShaderDesc* shader, uint32_t count);
+
+   GLenum _getSamplerWrapMode(GFXSamplerWrapMode mode) const;
+   GLenum _getSamplerMagFilterMode(GFXSamplerMagFilterMode mode) const;
+   GLenum _getSamplerMinFilteRMode(GFXSamplerMinFilterMode mode) const;
+   GLenum _getSamplerCompareMode(GFXSamplerCompareMode mode) const;
 };

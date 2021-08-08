@@ -15,11 +15,16 @@ enum class CommandType
    BlendState,
    BindPipeline,
 
-   UpdatePushConstants,
+   BindPushConstants,
    BindDescriptorSets,
    BindVertexBuffer,
    BindVertexBuffers,
    BindIndexBuffer,
+   BindConstantBuffer,
+   BindTexture,
+   BindTextures,
+   BindSampler,
+   BindSamplers,
 
    DrawPrimitives,
    DrawPrimitivesInstanced,
@@ -105,11 +110,15 @@ public:
 
     void bindPipeline(PipelineHandle handle);
 
-    void updatePushConstants(uint32_t offset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data);
-    //void bindDescriptorSets(/* TODO: parameters */);
+    void bindPushConstants(uint32_t offset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data);
     void bindVertexBuffer(uint32_t bindingSlot, BufferHandle buffer, uint32_t stride, uint32_t offset);
     void bindVertexBuffers(uint32_t startBindingSlot, uint32_t count, const BufferHandle *buffers, const uint32_t* strides, const uint32_t* offsets);
     void bindIndexBuffer(BufferHandle buffer, GFXIndexBufferType indexType, uint32_t offset);
+    void bindConstantBuffer(uint32_t index, BufferHandle buffer, uint32_t offset, uint32_t size);
+    void bindTexture(uint32_t index, TextureHandle texture);
+    void bindTextures(uint32_t startIndex, uint32_t count, TextureHandle* textures);
+    void bindSampler(uint32_t index, SamplerHandle sampler);
+    void bindSamplers(uint32_t startIndex, uint32_t count, SamplerHandle* samplers);
 
     void drawPrimitives(int vertexStart, int vertexCount);
     void drawPrimitivesInstanced(int vertexStart, int vertexCount, int instanceCount);

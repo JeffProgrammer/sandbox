@@ -4,6 +4,8 @@ typedef unsigned int BufferHandle;
 typedef unsigned int PipelineHandle;
 typedef unsigned int StateBlockHandle;
 typedef unsigned int TextureHandle;
+typedef unsigned int SamplerHandle;
+typedef unsigned int ResourceHandle;
 
 enum class BufferUsageEnum
 {
@@ -98,6 +100,35 @@ enum class GFXStencilFunc
    DECR
 };
 
+enum class GFXSamplerWrapMode
+{
+   CLAMP_TO_EDGE,
+   MIRRORED_REPEAT,
+   REPEAT
+};
+
+enum class GFXSamplerMagFilterMode
+{
+   LINEAR,
+   NEAREST
+};
+
+enum class GFXSamplerMinFilterMode
+{
+   LINEAR,
+   NEAREST,
+   NEAREST_MIP,
+   NEAREST_MIP_WEIGHTED,
+   LINEAR_MIP,
+   LINEAR_MIP_WEIGHTED
+};
+
+enum class GFXSamplerCompareMode
+{
+   REFERENCE_TO_TEXTURE,
+   NONE
+};
+
 enum class FillMode
 {
    SOLID,
@@ -129,6 +160,29 @@ struct GFXBufferDesc
 };
 
 struct GFXBlendStateDesc
+{
+
+};
+
+// Uses OpenGL defaults
+struct GFXSamplerStateDesc
+{
+   GFXSamplerMinFilterMode minFilterMode = GFXSamplerMinFilterMode::NEAREST_MIP_WEIGHTED;
+   GFXSamplerMagFilterMode magFilterMode = GFXSamplerMagFilterMode::LINEAR;
+   int32_t minLOD = -1000;
+   int32_t maxLOD = 1000;
+   GFXSamplerWrapMode wrapS = GFXSamplerWrapMode::REPEAT;
+   GFXSamplerWrapMode wrapT = GFXSamplerWrapMode::REPEAT;
+   GFXSamplerWrapMode wrapR = GFXSamplerWrapMode::REPEAT;
+   float borderColorR = 0.0f;
+   float borderColorG = 0.0f;
+   float borderColorB = 0.0f;
+   float borderColorA = 0.0f;
+   GFXSamplerCompareMode compareMode = GFXSamplerCompareMode::NONE;
+   GFXCompareFunc compareFunc = GFXCompareFunc::ALWAYS;
+};
+
+struct GFXTextureStateDesc
 {
 
 };
@@ -193,3 +247,4 @@ struct GFXPipelineDesc
    GFXInputLayoutDesc inputLayout;
    PrimitiveType primitiveType;
 };
+

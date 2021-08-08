@@ -179,6 +179,63 @@ void GFXGLDevice::deleteStateBlock(StateBlockHandle handle)
    assert(false && "GFXGLDevice::deleteStateBlock() is not implemented");
 }
 
+SamplerHandle GFXGLDevice::createSampler(const GFXSamplerStateDesc& desc)
+{
+   GLuint sampler;
+   glGenSamplers(1, &sampler);
+   glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, _getSamplerMinFilteRMode(desc.minFilterMode));
+   glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, _getSamplerMagFilterMode(desc.magFilterMode));
+   glSamplerParameteri(sampler, GL_TEXTURE_MIN_LOD, desc.minLOD);
+   glSamplerParameteri(sampler, GL_TEXTURE_MAX_LOD, desc.maxLOD);
+   glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, _getSamplerWrapMode(desc.wrapS));
+   glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, _getSamplerWrapMode(desc.wrapT));
+   glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, _getSamplerWrapMode(desc.wrapR));
+
+   float colors[4] = { desc.borderColorR, desc.borderColorG, desc.borderColorB, desc.borderColorA };
+   glSamplerParameterfv(sampler, GL_TEXTURE_BORDER_COLOR, colors);
+
+   if (desc.compareMode != GFXSamplerCompareMode::NONE)
+   {
+      glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, _getSamplerCompareMode(desc.compareMode));
+      glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, _getCompareFunc(desc.compareFunc));
+   }
+
+   GLSampler state;
+   state.handle = sampler;
+
+   SamplerHandle samplerHandle = mSamplerHandleCounter++;
+   mSamplers[samplerHandle] = std::move(state);
+   return samplerHandle;
+}
+
+void GFXGLDevice::deleteSampler(SamplerHandle handle)
+{
+   const auto& found = mSamplers.find(handle);
+   if (found != mSamplers.end())
+   {
+      glDeleteSamplers(1, &found->second.handle);
+
+      mSamplers.erase(found);
+   }
+#ifdef GFX_DEBUG
+   else
+   {
+      assert(false);
+   }
+#endif
+}
+
+TextureHandle GFXGLDevice::createTexture(const GFXTextureStateDesc& desc)
+{
+   assert(false && "GFXGLDevice::createTexture() is not implemented");
+   return 0;
+}
+
+void GFXGLDevice::deleteTexture(TextureHandle handle)
+{
+   assert(false && "GFXGLDevice::deleteTexture() is not implemented");
+}
+
 void* GFXGLDevice::mapBuffer(BufferHandle handle, uint32_t offset, uint32_t size)
 {
    // At the moment, this is a REALLY SLOW WAY TO UPDATE A BUFFER. We can do _A TON_ of optimizations here
@@ -288,22 +345,20 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
             // Stencil Settings
             if (depthStencil.enableStencilTest)
             {
-               // TODO: readMask?
-
                glEnable(GL_STENCIL_TEST);
 
                glStencilFuncSeparate(
                   GL_FRONT, 
                   depthStencil.frontFaceStencil.stencilCompareOp, 
                   depthStencil.frontFaceStencil.referenceValue, 
-                  depthStencil.frontFaceStencil.stencilWriteMask
+                  depthStencil.frontFaceStencil.stencilReadMask
                );
 
                glStencilFuncSeparate(
                   GL_BACK,
                   depthStencil.backFaceStencil.stencilCompareOp,
                   depthStencil.backFaceStencil.referenceValue,
-                  depthStencil.backFaceStencil.stencilWriteMask
+                  depthStencil.backFaceStencil.stencilReadMask
                );
 
                glStencilOpSeparate(
@@ -319,6 +374,9 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
                   depthStencil.backFaceStencil.depthFailFunc,
                   depthStencil.backFaceStencil.depthPassFunc
                );
+
+               glStencilMaskSeparate(GL_FRONT, depthStencil.frontFaceStencil.stencilWriteMask);
+               glStencilMaskSeparate(GL_BACK, depthStencil.backFaceStencil.stencilWriteMask);
             }
             else
             {
@@ -346,7 +404,7 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
             break;
          }
 
-         case CommandType::UpdatePushConstants:
+         case CommandType::BindPushConstants:
          {
             // for now assume offset is always 0... TODO: keep a copy in ram
             // and then upload everything (or just update changes if possible?)
@@ -393,7 +451,7 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
                offsets[i] = static_cast<GLintptr>(cmdBuffer[offset++]);
             }
 
-            if (true)//mCaps.hasBindVertexBuffers)
+            if (mCaps.hasMultiBind)
             {
                glBindVertexBuffers(startBindingSlot, count, buffers, offsets, strides);
             }
@@ -416,6 +474,56 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
 
             mState.indexBufferType = type == GFXIndexBufferType::BITS_16 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+            break;
+         }
+
+         case CommandType::BindConstantBuffer:
+         {
+            break;
+         }
+
+         case CommandType::BindTexture:
+         {
+            break;
+         }
+
+         case CommandType::BindTextures:
+         {
+            break;
+         }
+
+         case CommandType::BindSampler:
+         {
+            const uint32_t index = cmdBuffer[offset++];
+            const SamplerHandle handle = static_cast<SamplerHandle>(cmdBuffer[offset++]);
+            const GLuint sampler = mSamplers[handle].handle;
+
+            glBindSampler(index, sampler);
+            break;
+         }
+
+         case CommandType::BindSamplers:
+         {
+            const uint32_t startingIndex = cmdBuffer[offset++];
+            const uint32_t count = cmdBuffer[offset++];
+
+            if (mCaps.hasMultiBind)
+            {
+               GLuint samplers[32];
+               for (uint32_t i = 0; i < count; ++i)
+                  samplers[i] = mSamplers[(SamplerHandle)cmdBuffer[offset++]].handle;
+
+               glBindSamplers(startingIndex, count, samplers);
+            }
+            else
+            {
+               for (uint32_t i = 0; i < count; i++)
+               {
+                  uint32_t sampler = mSamplers[(SamplerHandle)cmdBuffer[offset++]].handle;
+                  glBindSampler(startingIndex + i, sampler);
+               }
+            }
+
             break;
          }
 
@@ -597,6 +705,72 @@ GLenum GFXGLDevice::_getInputLayoutType(InputLayoutFormat format) const
       return GL_SHORT;
    case InputLayoutFormat::INT:
       return GL_INT;
+   }
+
+   // error
+   return 0;
+}
+
+GLenum GFXGLDevice::_getSamplerWrapMode(GFXSamplerWrapMode mode) const
+{
+   switch (mode)
+   {
+   case GFXSamplerWrapMode::CLAMP_TO_EDGE:
+      return GL_CLAMP_TO_EDGE;
+   case GFXSamplerWrapMode::MIRRORED_REPEAT:
+      return GL_MIRRORED_REPEAT;
+   case GFXSamplerWrapMode::REPEAT:
+      return GL_REPEAT;
+   }
+
+   // error
+   return 0;
+}
+
+GLenum GFXGLDevice::_getSamplerMagFilterMode(GFXSamplerMagFilterMode mode) const
+{
+   switch (mode)
+   {
+   case GFXSamplerMagFilterMode::LINEAR:
+      return GL_LINEAR;
+   case GFXSamplerMagFilterMode::NEAREST:
+      return GL_NEAREST;
+   }
+
+   // error
+   return 0;
+}
+
+GLenum GFXGLDevice::_getSamplerMinFilteRMode(GFXSamplerMinFilterMode mode) const
+{
+   switch (mode)
+   {
+   case GFXSamplerMinFilterMode::LINEAR:
+      return GL_LINEAR;
+   case GFXSamplerMinFilterMode::NEAREST:
+      return GL_NEAREST;
+   case GFXSamplerMinFilterMode::NEAREST_MIP:
+      return GL_NEAREST_MIPMAP_NEAREST;
+   case GFXSamplerMinFilterMode::NEAREST_MIP_WEIGHTED:
+      return GL_NEAREST_MIPMAP_LINEAR;
+   case GFXSamplerMinFilterMode::LINEAR_MIP:
+      return GL_LINEAR_MIPMAP_NEAREST;
+   case GFXSamplerMinFilterMode::LINEAR_MIP_WEIGHTED:
+      return GL_LINEAR_MIPMAP_LINEAR;
+   }
+
+   // error
+   return 0;
+}
+
+GLenum GFXGLDevice::_getSamplerCompareMode(GFXSamplerCompareMode mode) const
+{
+   switch (mode)
+   {
+   case GFXSamplerCompareMode::REFERENCE_TO_TEXTURE:
+      return GL_COMPARE_REF_TO_TEXTURE;
+   case GFXSamplerCompareMode::NONE:
+      return GL_NONE;
    }
 
    // error

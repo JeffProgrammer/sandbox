@@ -67,12 +67,12 @@ void GFXCmdBuffer::bindPipeline(PipelineHandle handle)
     cmdBuffer[offset++] = handle;
 }
 
-void GFXCmdBuffer::updatePushConstants(uint32_t offset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data)
+void GFXCmdBuffer::bindPushConstants(uint32_t offset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data)
 {
-    int type = (int)CommandType::UpdatePushConstants;
+    int type = (int)CommandType::BindPushConstants;
     cmdBuffer[offset++] = type;
 
-    cmdBuffer[offset++] = allocPushConstant(offset, size, data);
+    cmdBuffer[offset++] = allocPushConstant(offset, size, shaderStageBits, data);
 }
 
 void GFXCmdBuffer::bindVertexBuffer(uint32_t bindingSlot, BufferHandle buffer, uint32_t stride, uint32_t offset)
@@ -109,6 +109,61 @@ void GFXCmdBuffer::bindIndexBuffer(BufferHandle buffer, GFXIndexBufferType index
     cmdBuffer[offset++] = buffer;
     cmdBuffer[offset++] = (int)indexType;
     cmdBuffer[offset++] = offset;
+}
+
+void GFXCmdBuffer::bindConstantBuffer(uint32_t index, BufferHandle buffer, uint32_t offset, uint32_t size)
+{
+   int type = (int)CommandType::BindConstantBuffer;
+   cmdBuffer[offset++] = type;
+
+   cmdBuffer[offset++] = index;
+   cmdBuffer[offset++] = buffer;
+   cmdBuffer[offset++] = offset;
+   cmdBuffer[offset++] = size;
+}
+
+void GFXCmdBuffer::bindTexture(uint32_t index, TextureHandle texture)
+{
+   int type = (int)CommandType::BindTexture;
+   cmdBuffer[offset++] = type;
+
+   cmdBuffer[offset++] = index;
+   cmdBuffer[offset++] = texture;
+}
+
+void GFXCmdBuffer::bindTextures(uint32_t startIndex, uint32_t count, TextureHandle* textures)
+{
+   int type = (int)CommandType::BindTextures;
+   cmdBuffer[offset++] = type;
+
+   cmdBuffer[offset++] = startIndex;
+   cmdBuffer[offset++] = count;
+   for (uint32_t i = 0; i < count; ++i)
+   {
+      cmdBuffer[offset++] = textures[i];
+   }
+}
+
+void GFXCmdBuffer::bindSampler(uint32_t index, SamplerHandle sampler)
+{
+   int type = (int)CommandType::BindSampler;
+   cmdBuffer[offset++] = type;
+
+   cmdBuffer[offset++] = index;
+   cmdBuffer[offset++] = sampler;
+}
+
+void GFXCmdBuffer::bindSamplers(uint32_t startIndex, uint32_t count, SamplerHandle* samplers)
+{
+   int type = (int)CommandType::BindSamplers;
+   cmdBuffer[offset++] = type;
+
+   cmdBuffer[offset++] = startIndex;
+   cmdBuffer[offset++] = count;
+   for (uint32_t i = 0; i < count; ++i)
+   {
+      cmdBuffer[offset++] = samplers[i];
+   }
 }
 
 void GFXCmdBuffer::drawPrimitives(int vertexStart, int vertexCount)

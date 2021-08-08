@@ -18,6 +18,12 @@ public:
    virtual StateBlockHandle createBlendState(const GFXBlendStateDesc& desc) = 0;
    virtual void deleteStateBlock(StateBlockHandle handle) = 0;
 
+   virtual SamplerHandle createSampler(const GFXSamplerStateDesc& desc) = 0;
+   virtual void deleteSampler(SamplerHandle handle) = 0;
+
+   virtual TextureHandle createTexture(const GFXTextureStateDesc& desc) = 0;
+   virtual void deleteTexture(TextureHandle handle) = 0;
+
    virtual void* mapBuffer(BufferHandle handle, uint32_t offset, uint32_t size) = 0;
    virtual void unmapBuffer(BufferHandle handle) = 0;
 
