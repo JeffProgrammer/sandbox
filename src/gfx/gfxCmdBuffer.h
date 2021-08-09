@@ -124,6 +124,4 @@ public:
     void drawPrimitivesInstanced(int vertexStart, int vertexCount, int instanceCount);
     void drawIndexedPrimitives(int vertexCount, int indexBufferOffset);
     void drawIndexedPrimitivesInstanced( int vertexCount, int indexBufferOffset, int instanceCount);
-
-    virtual void submit() = 0;
 };

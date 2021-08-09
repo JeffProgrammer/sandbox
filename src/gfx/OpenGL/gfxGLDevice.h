@@ -72,6 +72,7 @@ class GFXGLDevice : public GFXDevice
       GLuint pushConstantLocation = 0;
       GLuint currentMappedBuffer = 0;
       GLenum currentMappedBufferType = 0;
+      GLuint globalVAO = 0;
    } mState;
 
    struct GLSampler
@@ -103,6 +104,9 @@ class GFXGLDevice : public GFXDevice
    int mSamplerHandleCounter = 0;
 
 public:
+   GFXGLDevice();
+   virtual ~GFXGLDevice();
+
    virtual BufferHandle createBuffer(const GFXBufferDesc& desc) override;
    virtual void deleteBuffer(BufferHandle handle) override;
 

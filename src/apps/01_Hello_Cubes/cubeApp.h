@@ -1,5 +1,8 @@
+#pragma once
+
 #include "app.h"
 #include "core/camera.h"
+#include "gfx/gfxDevice.h"
 
 struct CameraUbo
 {
@@ -30,7 +33,6 @@ public:
    void updatePerspectiveMatrix();
    void initGL();
    void initUBOs();
-   void initShader();
    void destroyGL();
    void render(double dt);
 
@@ -39,21 +41,21 @@ private:
    CameraUbo cameraData;
    SunUbo sunData;
 
+   GFXDevice* graphicsDevice;
+
    int windowWidth;
    int windowHeight;
 
-   GLuint shaderProgram;
+   StateBlockHandle depthStateHandle;
+   StateBlockHandle rasterizerStateHandle;
 
-   GLuint cubeVbo;
-   GLuint cubeIbo;
-   GLuint vao;
-   GLuint cameraUbo;
-   GLuint sunUbo;
+   BufferHandle cubeVertexBufferHandle;
+   BufferHandle cubeIndexBufferHandle;
+   PipelineHandle cubePipelineHandle;
+   
+   BufferHandle cameraBufferHandle;
+   BufferHandle sunBufferHandle;
 
-   GLuint uniformModelMatLocation;
-   GLuint uniformSunLocationBlock;
-   GLuint uniformCameraLocationBlock;
-
-   GLuint cameraUboLocation;
-   GLuint sunUboLocation;
+   int cameraUboLocation;
+   int sunUboLocation;
 };

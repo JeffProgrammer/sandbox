@@ -40,16 +40,6 @@ enum class PrimitiveType
    LINE_STRIP
 };
 
-enum class InputLayoutSemanticName
-{
-   POSITION,
-   NORMAL,
-   TEXCOORD0,
-   TEXCOORD1,
-   TEXCOORD2,
-   TEXCOORD3
-};
-
 enum class InputLayoutFormat
 {
    FLOAT,
@@ -155,7 +145,7 @@ struct GFXBufferDesc
    BufferType type;
    size_t sizeInBytes;
    BufferUsageEnum usage;
-   uint32_t accessFlags;
+   //uint32_t accessFlags;
    void* data;
 };
 
@@ -219,7 +209,7 @@ struct GFXRasterizerStateDesc
 
 struct GFXInputLayoutElementDesc
 {
-   InputLayoutSemanticName semanticName;
+   uint32_t slot;
    InputLayoutFormat type;
    InputLayoutDivisor divisor;
    uint32_t bufferBinding;

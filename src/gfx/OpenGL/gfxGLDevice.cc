@@ -1,7 +1,7 @@
 #include <assert.h>
 #include "gfx/OpenGL/gfxGLDevice.h"
 
-static void validateShaderCompilation(GLuint shader)
+static inline void validateShaderCompilation(GLuint shader)
 {
    GLint status;
    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
@@ -19,7 +19,7 @@ static void validateShaderCompilation(GLuint shader)
    }
 }
 
-static void validateShaderLinkCompilation(GLuint program)
+static inline void validateShaderLinkCompilation(GLuint program)
 {
    GLint status;
    glGetProgramiv(program, GL_LINK_STATUS, &status);
@@ -35,6 +35,21 @@ static void validateShaderLinkCompilation(GLuint program)
       delete[] log;
       abort();
    }
+}
+
+GFXGLDevice::GFXGLDevice()
+{
+   glGenVertexArrays(1, &mState.globalVAO);
+   glBindVertexArray(mState.globalVAO);
+
+   // enable scissor test by default
+   glEnable(GL_SCISSOR_TEST);
+}
+
+GFXGLDevice::~GFXGLDevice()
+{
+   glBindVertexArray(0);
+   glDeleteVertexArrays(1, &mState.globalVAO);
 }
 
 BufferHandle GFXGLDevice::createBuffer(const GFXBufferDesc& desc)
@@ -81,12 +96,14 @@ PipelineHandle GFXGLDevice::createPipeline(const GFXPipelineDesc& desc)
    {
       // Note: semantic name is our slot (for DX compatible purposes?)
       const GFXInputLayoutElementDesc& attribute = desc.inputLayout.descs[i];
-      GLuint slot = (GLuint)attribute.semanticName;
+      GLuint slot = (GLuint)attribute.slot;
 
       glVertexAttribFormat(slot, attribute.count, _getInputLayoutType(attribute.type), GL_FALSE, attribute.offset);
       glVertexAttribBinding(slot, attribute.bufferBinding);
       glVertexBindingDivisor(slot, attribute.divisor == InputLayoutDivisor::PER_VERTEX ? 0 : 1);
    }
+
+   glBindVertexArray(mState.globalVAO);
 
    pipelineState.primitiveType = _getPrimitiveType(desc.primitiveType);
    pipelineState.shader = _createShaderProgram(desc.shadersStages, desc.shaderStageCount); 
@@ -470,6 +487,7 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
          {
             const BufferHandle handle = static_cast<BufferHandle>(cmdBuffer[offset++]);
             const GFXIndexBufferType type = (GFXIndexBufferType)cmdBuffer[offset++];
+            const GLuint bufferOffset = cmdBuffer[offset++];
             const GLuint buffer = mBuffers[handle].buffer;
 
             mState.indexBufferType = type == GFXIndexBufferType::BITS_16 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
@@ -479,6 +497,14 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
 
          case CommandType::BindConstantBuffer:
          {
+            const uint32_t index = cmdBuffer[offset++];
+            const BufferHandle handle = static_cast<BufferHandle>(cmdBuffer[offset++]);
+            const uint32_t bufferOffset = cmdBuffer[offset++];
+            const uint32_t size = cmdBuffer[offset++];
+
+            const GLuint buffer = mBuffers[handle].buffer;
+
+            glBindBufferRange(GL_UNIFORM_BUFFER, index, buffer, bufferOffset, size);
             break;
          }
 
@@ -787,7 +813,7 @@ GLuint GFXGLDevice::_createShaderProgram(const GFXShaderDesc* shader, uint32_t c
       GLenum shaderType = _getShaderType(shaderStage.type);
 
       GLuint handle = glCreateShader(shaderType);
-      glShaderSource(handle, 1, &shader->code, NULL);
+      glShaderSource(handle, 1, &(shaderStage.code), NULL);
       glCompileShader(handle);
       validateShaderCompilation(handle);
 

@@ -1,10 +1,11 @@
 #include <stdio.h>
-#include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <imgui.h>
 #include "apps/01_Hello_Cubes/cubeApp.h"
 #include "core/cube.h"
 #include "gl/shader.h"
+#include "gfx/gfxCmdBuffer.h"
+#include "gfx/OpenGL/gfxGLDevice.h"
 
 IMPLEMENT_APPLICATION(CubeApplication);
 
@@ -72,72 +73,147 @@ void CubeApplication::updatePerspectiveMatrix()
 
 void CubeApplication::initGL()
 {
-   glGenVertexArrays(1, &vao);
-   glBindVertexArray(vao);
+   graphicsDevice = new GFXGLDevice();
 
-   glGenBuffers(1, &cubeVbo);
-   glBindBuffer(GL_ARRAY_BUFFER, cubeVbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertsBuffer), cubeVertsBuffer, GL_STATIC_DRAW);
+   {
+      GFXBufferDesc cubeBuffer;
+      cubeBuffer.type = BufferType::VERTEX_BUFFER;
+      cubeBuffer.usage = BufferUsageEnum::STATIC_GPU_ONLY;
+      cubeBuffer.sizeInBytes = sizeof(cubeVertsBuffer);
+      cubeBuffer.data = (void*)cubeVertsBuffer;
 
-   glEnableVertexAttribArray(0);
-   glEnableVertexAttribArray(1);
-   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, NULL);
-   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)12);
+      cubeVertexBufferHandle = graphicsDevice->createBuffer(cubeBuffer);
+   }
 
-   glGenBuffers(1, &cubeIbo);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeIbo);
-   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
+   {
+      GFXInputLayoutElementDesc inputLayoutDescs[2];
+      inputLayoutDescs[0].slot = 0;
+      inputLayoutDescs[0].count = 3;
+      inputLayoutDescs[0].type = InputLayoutFormat::FLOAT;
+      inputLayoutDescs[0].divisor = InputLayoutDivisor::PER_VERTEX;
+      inputLayoutDescs[0].offset = 0;
+      inputLayoutDescs[0].bufferBinding = 0;
 
-   initShader();
+      inputLayoutDescs[1].slot = 1;
+      inputLayoutDescs[1].count = 3;
+      inputLayoutDescs[1].type = InputLayoutFormat::FLOAT;
+      inputLayoutDescs[1].divisor = InputLayoutDivisor::PER_VERTEX;
+      inputLayoutDescs[1].offset = 12;
+      inputLayoutDescs[1].bufferBinding = 0;
+
+      GFXInputLayoutDesc inputLayout;
+      inputLayout.count = 2;
+      inputLayout.descs = inputLayoutDescs;
+
+      char* vertShader = readShaderFile("apps/01_Hello_Cubes/shaders/cube.vert");
+      char* fragShader = readShaderFile("apps/01_Hello_Cubes/shaders/cube.frag");
+
+      GFXShaderDesc shaders[2];
+      shaders[0].type = GFXShaderType::VERTEX;
+      shaders[0].code = vertShader;
+      shaders[0].codeLength = strlen(vertShader);
+
+      shaders[1].type = GFXShaderType::FRAGMENT;
+      shaders[1].code = fragShader;
+      shaders[1].codeLength = strlen(fragShader);
+
+      GFXPipelineDesc pipelineDesc;
+      pipelineDesc.primitiveType = PrimitiveType::TRIANGLE_LIST;
+      pipelineDesc.inputLayout = std::move(inputLayout);
+      pipelineDesc.shadersStages = shaders;
+      pipelineDesc.shaderStageCount = 2;
+
+      cubePipelineHandle = graphicsDevice->createPipeline(pipelineDesc);
+   }
+
+   {
+      GFXBufferDesc cubeIndexBuffer;
+      cubeIndexBuffer.type = BufferType::INDEX_BUFFER;
+      cubeIndexBuffer.usage = BufferUsageEnum::STATIC_GPU_ONLY;
+      cubeIndexBuffer.sizeInBytes = sizeof(cubeIndices);
+      cubeIndexBuffer.data = (void*)cubeIndices;
+
+      cubeIndexBufferHandle = graphicsDevice->createBuffer(cubeIndexBuffer);
+   }
+
    initUBOs();
+
+   cameraUboLocation = 0;
+   sunUboLocation = 1;
 }
 
 void CubeApplication::initUBOs()
 {
-   glGenBuffers(1, &cameraUbo);
-   glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
-   glBufferData(GL_UNIFORM_BUFFER, sizeof(CameraUbo), NULL, GL_DYNAMIC_DRAW);
+   {
+      GFXBufferDesc cameraBufferDesc;
+      cameraBufferDesc.type = BufferType::CONSTANT_BUFFER;
+      cameraBufferDesc.usage = BufferUsageEnum::DYNAMIC_CPU_TO_GPU;
+      cameraBufferDesc.sizeInBytes = sizeof(CameraUbo);
+      cameraBufferDesc.data = (void*)NULL;
 
-   glGenBuffers(1, &sunUbo);
-   glBindBuffer(GL_UNIFORM_BUFFER, sunUbo);
-   glBufferData(GL_UNIFORM_BUFFER, sizeof(SunUbo), &sunData, GL_STATIC_DRAW);
-}
+      cameraBufferHandle = graphicsDevice->createBuffer(cameraBufferDesc);
+   }
 
-void CubeApplication::initShader()
-{
-   char* vertShader = readShaderFile("apps/01_Hello_Cubes/shaders/cube.vert");
-   char* fragShader = readShaderFile("apps/01_Hello_Cubes/shaders/cube.frag");
+   {
+      GFXBufferDesc sunBufferDesc;
+      sunBufferDesc.type = BufferType::CONSTANT_BUFFER;
+      sunBufferDesc.usage = BufferUsageEnum::STATIC_GPU_ONLY;
+      sunBufferDesc.sizeInBytes = sizeof(SunUbo);
+      sunBufferDesc.data = (void*)&sunData;
 
-   shaderProgram = createVertexAndFragmentShaderProgram(vertShader, fragShader);
-
-   free(vertShader);
-   free(fragShader);
-
-   uniformModelMatLocation = glGetUniformLocation(shaderProgram, "modelMatrix");
-   uniformSunLocationBlock = glGetUniformBlockIndex(shaderProgram, "SunBuffer");
-   uniformCameraLocationBlock = glGetUniformBlockIndex(shaderProgram, "CameraBuffer");
-
-   cameraUboLocation = 0;
-   sunUboLocation = 1;
-
-   glUniformBlockBinding(shaderProgram, uniformCameraLocationBlock, cameraUboLocation);
-   glUniformBlockBinding(shaderProgram, uniformSunLocationBlock, sunUboLocation);
+      sunBufferHandle = graphicsDevice->createBuffer(sunBufferDesc);
+   }
 }
 
 void CubeApplication::destroyGL()
 {
-   glUseProgram(0);
-   glDeleteProgram(shaderProgram);
+   graphicsDevice->deleteBuffer(cubeVertexBufferHandle);
+   graphicsDevice->deleteBuffer(cubeIndexBufferHandle);
+   graphicsDevice->deleteBuffer(cameraBufferHandle);
+   graphicsDevice->deleteBuffer(sunBufferHandle);
+   graphicsDevice->deletePipeline(cubePipelineHandle);
 
-   GLuint deleteBuffers[4] = { cubeVbo, cubeIbo, cameraUbo, sunUbo };
-   glDeleteBuffers(4, deleteBuffers);
-
-   glBindVertexArray(0);
-   glDeleteVertexArrays(1, &vao);
+   delete graphicsDevice;
 }
 
 void CubeApplication::render(double dt)
 {
+   void* pData = graphicsDevice->mapBuffer(cameraBufferHandle, 0, sizeof(CameraUbo));
+   memcpy(pData, &cameraData, sizeof(CameraUbo));
+   graphicsDevice->unmapBuffer(cameraBufferHandle);
+
+   GFXCmdBuffer cmdBuffer;
+
+   cmdBuffer.begin();
+
+   cmdBuffer.setViewport(0, 0, windowWidth, windowHeight);
+   cmdBuffer.setScissor(0, 0, windowWidth, windowHeight);
+
+   // TODO, add framebuffer binding and clearing...
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   glClearColor(0.0, 0.0, 0.0, 1.0);
+
+   // use state blocks..
+   glEnable(GL_DEPTH_TEST);
+   glEnable(GL_CULL_FACE);
+   glCullFace(GL_FRONT);
+   glFrontFace(GL_CW);
+
+   cmdBuffer.bindPipeline(cubePipelineHandle);
+   cmdBuffer.bindConstantBuffer(0, cameraBufferHandle, 0, sizeof(CameraUbo));
+   cmdBuffer.bindConstantBuffer(1, sunBufferHandle, 0, sizeof(SunUbo));
+   cmdBuffer.bindVertexBuffer(0, cubeVertexBufferHandle, sizeof(float) * 6, 0);
+   cmdBuffer.bindIndexBuffer(cubeIndexBufferHandle, GFXIndexBufferType::BITS_16, 0);
+
+   cmdBuffer.drawIndexedPrimitives(36, 0);
+
+   cmdBuffer.end();
+
+   const GFXCmdBuffer* buffer[1];
+   buffer[0] = &cmdBuffer;
+   graphicsDevice->executeCmdBuffers(buffer, 1);
+
+   /*
    glViewport(0, 0, windowWidth, windowHeight);
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -153,7 +229,7 @@ void CubeApplication::render(double dt)
    glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
 
-   glm::mat4 cubeModelMat = glm::mat4(1.0f);
+   //glm::mat4 cubeModelMat = glm::mat4(1.0f);
 
    // Draw Cube
    glBindVertexArray(vao);
@@ -162,9 +238,10 @@ void CubeApplication::render(double dt)
 
    glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
    glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
-   glUniformMatrix4fv(uniformModelMatLocation, 1, GL_FALSE, (const GLfloat*)&cubeModelMat[0]);
+   //glUniformMatrix4fv(uniformModelMatLocation, 1, GL_FALSE, (const GLfloat*)&cubeModelMat[0]);
 
    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, NULL);
+   */
 }
 
 void CubeApplication::onRenderImGUI(double dt)

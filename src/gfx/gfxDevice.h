@@ -7,6 +7,8 @@ class GFXCmdBuffer;
 class GFXDevice
 {
 public:
+   virtual ~GFXDevice() {}
+
    virtual BufferHandle createBuffer(const GFXBufferDesc& desc) = 0;
    virtual void deleteBuffer(BufferHandle handle) = 0;
 

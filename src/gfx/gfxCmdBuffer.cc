@@ -67,15 +67,15 @@ void GFXCmdBuffer::bindPipeline(PipelineHandle handle)
     cmdBuffer[offset++] = handle;
 }
 
-void GFXCmdBuffer::bindPushConstants(uint32_t offset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data)
+void GFXCmdBuffer::bindPushConstants(uint32_t pushConstantOffset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data)
 {
     int type = (int)CommandType::BindPushConstants;
     cmdBuffer[offset++] = type;
 
-    cmdBuffer[offset++] = allocPushConstant(offset, size, shaderStageBits, data);
+    cmdBuffer[offset++] = allocPushConstant(pushConstantOffset, size, shaderStageBits, data);
 }
 
-void GFXCmdBuffer::bindVertexBuffer(uint32_t bindingSlot, BufferHandle buffer, uint32_t stride, uint32_t offset)
+void GFXCmdBuffer::bindVertexBuffer(uint32_t bindingSlot, BufferHandle buffer, uint32_t stride, uint32_t bufferOffset)
 {
     int type = (int)CommandType::BindVertexBuffer;
     cmdBuffer[offset++] = type;
@@ -83,12 +83,12 @@ void GFXCmdBuffer::bindVertexBuffer(uint32_t bindingSlot, BufferHandle buffer, u
     cmdBuffer[offset++] = bindingSlot;
     cmdBuffer[offset++] = buffer;
     cmdBuffer[offset++] = stride;
-    cmdBuffer[offset++] = offset;
+    cmdBuffer[offset++] = bufferOffset;
 }
 
 void GFXCmdBuffer::bindVertexBuffers(uint32_t startBindingSlot, uint32_t count, const BufferHandle *buffers, const uint32_t* strides, const uint32_t* offsets)
 {
-    int type = (int)CommandType::BindVertexBuffer;
+    int type = (int)CommandType::BindVertexBuffers;
     cmdBuffer[offset++] = type;
 
     cmdBuffer[offset++] = startBindingSlot;
@@ -101,24 +101,24 @@ void GFXCmdBuffer::bindVertexBuffers(uint32_t startBindingSlot, uint32_t count, 
     }
 }
 
-void GFXCmdBuffer::bindIndexBuffer(BufferHandle buffer, GFXIndexBufferType indexType, uint32_t offset)
+void GFXCmdBuffer::bindIndexBuffer(BufferHandle buffer, GFXIndexBufferType indexType, uint32_t bufferOffset)
 {
     int type = (int)CommandType::BindIndexBuffer;
     cmdBuffer[offset++] = type;
 
     cmdBuffer[offset++] = buffer;
     cmdBuffer[offset++] = (int)indexType;
-    cmdBuffer[offset++] = offset;
+    cmdBuffer[offset++] = bufferOffset;
 }
 
-void GFXCmdBuffer::bindConstantBuffer(uint32_t index, BufferHandle buffer, uint32_t offset, uint32_t size)
+void GFXCmdBuffer::bindConstantBuffer(uint32_t index, BufferHandle buffer, uint32_t bufferOffset, uint32_t size)
 {
    int type = (int)CommandType::BindConstantBuffer;
    cmdBuffer[offset++] = type;
 
    cmdBuffer[offset++] = index;
    cmdBuffer[offset++] = buffer;
-   cmdBuffer[offset++] = offset;
+   cmdBuffer[offset++] = bufferOffset;
    cmdBuffer[offset++] = size;
 }
 
