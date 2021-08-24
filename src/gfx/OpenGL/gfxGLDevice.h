@@ -17,7 +17,7 @@ class GFXGLDevice : public GFXDevice
    struct GLBuffer
    {
       GLuint buffer;
-      BufferUsageEnum usage;
+      GFXBufferUsageEnum usage;
       GLenum type;
    };
 
@@ -130,13 +130,13 @@ public:
    virtual void executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count) override;
 
 private:
-   GLenum _getBufferUsage(BufferUsageEnum usage) const;
-   GLenum _getBufferType(BufferType type) const;
-   GLenum _getPrimitiveType(PrimitiveType primitiveType) const;
+   GLenum _getBufferUsage(GFXBufferUsageEnum usage) const;
+   GLenum _getBufferType(GFXBufferType type) const;
+   GLenum _getPrimitiveType(GFXPrimitiveType primitiveType) const;
    GLenum _getStencilFunc(GFXStencilFunc func) const;
    GLenum _getCompareFunc(GFXCompareFunc func) const;
    GLenum _getShaderType(GFXShaderType shaderType) const;
-   GLenum _getInputLayoutType(InputLayoutFormat format) const;
+   GLenum _getInputLayoutType(GFXInputLayoutFormat format) const;
    GLuint _createShaderProgram(const GFXShaderDesc* shader, uint32_t count);
 
    GLenum _getSamplerWrapMode(GFXSamplerWrapMode mode) const;

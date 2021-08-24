@@ -42,6 +42,7 @@ private:
    SunUbo sunData;
 
    GFXDevice* graphicsDevice;
+   GFXCmdBuffer* cmdBuffer;
 
    int windowWidth;
    int windowHeight;

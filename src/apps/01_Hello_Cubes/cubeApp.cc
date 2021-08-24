@@ -74,11 +74,30 @@ void CubeApplication::updatePerspectiveMatrix()
 void CubeApplication::initGL()
 {
    graphicsDevice = new GFXGLDevice();
+   cmdBuffer = new GFXCmdBuffer();
+
+   {
+      GFXRasterizerStateDesc rasterState;
+      rasterState.cullMode = GFXCullMode::CULL_FRONT;
+      rasterState.windingMode = GFXWindingMode::CLOCKWISE;
+      rasterState.fillMode = GFXFillMode::SOLID;
+
+      rasterizerStateHandle = graphicsDevice->createRasterizerState(rasterState);
+   }
+
+   {
+      GFXDepthStencilStateDesc depthState;
+      depthState.enableDepthTest = true;
+      depthState.enableDepthWrite = true;
+      depthState.depthCompareFunc = GFXCompareFunc::LESS;
+
+      depthStateHandle = graphicsDevice->createDepthStencilState(depthState);
+   }
 
    {
       GFXBufferDesc cubeBuffer;
-      cubeBuffer.type = BufferType::VERTEX_BUFFER;
-      cubeBuffer.usage = BufferUsageEnum::STATIC_GPU_ONLY;
+      cubeBuffer.type = GFXBufferType::VERTEX_BUFFER;
+      cubeBuffer.usage = GFXBufferUsageEnum::STATIC_GPU_ONLY;
       cubeBuffer.sizeInBytes = sizeof(cubeVertsBuffer);
       cubeBuffer.data = (void*)cubeVertsBuffer;
 
@@ -89,15 +108,15 @@ void CubeApplication::initGL()
       GFXInputLayoutElementDesc inputLayoutDescs[2];
       inputLayoutDescs[0].slot = 0;
       inputLayoutDescs[0].count = 3;
-      inputLayoutDescs[0].type = InputLayoutFormat::FLOAT;
-      inputLayoutDescs[0].divisor = InputLayoutDivisor::PER_VERTEX;
+      inputLayoutDescs[0].type = GFXInputLayoutFormat::FLOAT;
+      inputLayoutDescs[0].divisor = GFXInputLayoutDivisor::PER_VERTEX;
       inputLayoutDescs[0].offset = 0;
       inputLayoutDescs[0].bufferBinding = 0;
 
       inputLayoutDescs[1].slot = 1;
       inputLayoutDescs[1].count = 3;
-      inputLayoutDescs[1].type = InputLayoutFormat::FLOAT;
-      inputLayoutDescs[1].divisor = InputLayoutDivisor::PER_VERTEX;
+      inputLayoutDescs[1].type = GFXInputLayoutFormat::FLOAT;
+      inputLayoutDescs[1].divisor = GFXInputLayoutDivisor::PER_VERTEX;
       inputLayoutDescs[1].offset = 12;
       inputLayoutDescs[1].bufferBinding = 0;
 
@@ -118,7 +137,7 @@ void CubeApplication::initGL()
       shaders[1].codeLength = strlen(fragShader);
 
       GFXPipelineDesc pipelineDesc;
-      pipelineDesc.primitiveType = PrimitiveType::TRIANGLE_LIST;
+      pipelineDesc.primitiveType = GFXPrimitiveType::TRIANGLE_LIST;
       pipelineDesc.inputLayout = std::move(inputLayout);
       pipelineDesc.shadersStages = shaders;
       pipelineDesc.shaderStageCount = 2;
@@ -128,8 +147,8 @@ void CubeApplication::initGL()
 
    {
       GFXBufferDesc cubeIndexBuffer;
-      cubeIndexBuffer.type = BufferType::INDEX_BUFFER;
-      cubeIndexBuffer.usage = BufferUsageEnum::STATIC_GPU_ONLY;
+      cubeIndexBuffer.type = GFXBufferType::INDEX_BUFFER;
+      cubeIndexBuffer.usage = GFXBufferUsageEnum::STATIC_GPU_ONLY;
       cubeIndexBuffer.sizeInBytes = sizeof(cubeIndices);
       cubeIndexBuffer.data = (void*)cubeIndices;
 
@@ -146,8 +165,8 @@ void CubeApplication::initUBOs()
 {
    {
       GFXBufferDesc cameraBufferDesc;
-      cameraBufferDesc.type = BufferType::CONSTANT_BUFFER;
-      cameraBufferDesc.usage = BufferUsageEnum::DYNAMIC_CPU_TO_GPU;
+      cameraBufferDesc.type = GFXBufferType::CONSTANT_BUFFER;
+      cameraBufferDesc.usage = GFXBufferUsageEnum::DYNAMIC_CPU_TO_GPU;
       cameraBufferDesc.sizeInBytes = sizeof(CameraUbo);
       cameraBufferDesc.data = (void*)NULL;
 
@@ -156,8 +175,8 @@ void CubeApplication::initUBOs()
 
    {
       GFXBufferDesc sunBufferDesc;
-      sunBufferDesc.type = BufferType::CONSTANT_BUFFER;
-      sunBufferDesc.usage = BufferUsageEnum::STATIC_GPU_ONLY;
+      sunBufferDesc.type = GFXBufferType::CONSTANT_BUFFER;
+      sunBufferDesc.usage = GFXBufferUsageEnum::STATIC_GPU_ONLY;
       sunBufferDesc.sizeInBytes = sizeof(SunUbo);
       sunBufferDesc.data = (void*)&sunData;
 
@@ -173,75 +192,41 @@ void CubeApplication::destroyGL()
    graphicsDevice->deleteBuffer(sunBufferHandle);
    graphicsDevice->deletePipeline(cubePipelineHandle);
 
+   delete cmdBuffer;
    delete graphicsDevice;
 }
 
 void CubeApplication::render(double dt)
 {
-   void* pData = graphicsDevice->mapBuffer(cameraBufferHandle, 0, sizeof(CameraUbo));
+   char* pData = (char*)graphicsDevice->mapBuffer(cameraBufferHandle, 0, sizeof(CameraUbo));
    memcpy(pData, &cameraData, sizeof(CameraUbo));
    graphicsDevice->unmapBuffer(cameraBufferHandle);
 
-   GFXCmdBuffer cmdBuffer;
+   cmdBuffer->begin();
 
-   cmdBuffer.begin();
+   cmdBuffer->setViewport(0, 0, windowWidth, windowHeight);
+   cmdBuffer->setScissor(0, 0, windowWidth, windowHeight);
 
-   cmdBuffer.setViewport(0, 0, windowWidth, windowHeight);
-   cmdBuffer.setScissor(0, 0, windowWidth, windowHeight);
-
-   // TODO, add framebuffer binding and clearing...
+   // TODO, add framebuffer binding and clearing...concept of a 'render pass'...
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glClearColor(0.0, 0.0, 0.0, 1.0);
 
-   // use state blocks..
-   glEnable(GL_DEPTH_TEST);
-   glEnable(GL_CULL_FACE);
-   glCullFace(GL_FRONT);
-   glFrontFace(GL_CW);
+   cmdBuffer->setRasterizerState(rasterizerStateHandle);
+   cmdBuffer->setDepthStencilState(depthStateHandle);
 
-   cmdBuffer.bindPipeline(cubePipelineHandle);
-   cmdBuffer.bindConstantBuffer(0, cameraBufferHandle, 0, sizeof(CameraUbo));
-   cmdBuffer.bindConstantBuffer(1, sunBufferHandle, 0, sizeof(SunUbo));
-   cmdBuffer.bindVertexBuffer(0, cubeVertexBufferHandle, sizeof(float) * 6, 0);
-   cmdBuffer.bindIndexBuffer(cubeIndexBufferHandle, GFXIndexBufferType::BITS_16, 0);
+   cmdBuffer->bindPipeline(cubePipelineHandle);
+   cmdBuffer->bindConstantBuffer(0, cameraBufferHandle, 0, sizeof(CameraUbo));
+   cmdBuffer->bindConstantBuffer(1, sunBufferHandle, 0, sizeof(SunUbo));
+   cmdBuffer->bindVertexBuffer(0, cubeVertexBufferHandle, sizeof(float) * 6, 0);
+   cmdBuffer->bindIndexBuffer(cubeIndexBufferHandle, GFXIndexBufferType::BITS_16, 0);
 
-   cmdBuffer.drawIndexedPrimitives(36, 0);
+   cmdBuffer->drawIndexedPrimitives(36, 0);
 
-   cmdBuffer.end();
+   cmdBuffer->end();
 
    const GFXCmdBuffer* buffer[1];
-   buffer[0] = &cmdBuffer;
+   buffer[0] = cmdBuffer;
    graphicsDevice->executeCmdBuffers(buffer, 1);
-
-   /*
-   glViewport(0, 0, windowWidth, windowHeight);
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   glClearColor(0.0, 0.0, 0.0, 1.0);
-   
-   glEnable(GL_DEPTH_TEST);
-   glEnable(GL_CULL_FACE);
-   glCullFace(GL_FRONT);
-   glFrontFace(GL_CW);
-
-   glUseProgram(shaderProgram);
-
-   // Update camera data
-   glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
-   glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
-
-   //glm::mat4 cubeModelMat = glm::mat4(1.0f);
-
-   // Draw Cube
-   glBindVertexArray(vao);
-   glBindBuffer(GL_ARRAY_BUFFER, cubeVbo);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeIbo);
-
-   glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
-   glBindBufferBase(GL_UNIFORM_BUFFER, sunUboLocation, sunUbo);
-   //glUniformMatrix4fv(uniformModelMatLocation, 1, GL_FALSE, (const GLfloat*)&cubeModelMat[0]);
-
-   glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, NULL);
-   */
 }
 
 void CubeApplication::onRenderImGUI(double dt)

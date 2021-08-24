@@ -7,13 +7,13 @@ typedef unsigned int TextureHandle;
 typedef unsigned int SamplerHandle;
 typedef unsigned int ResourceHandle;
 
-enum class BufferUsageEnum
+enum class GFXBufferUsageEnum
 {
    STATIC_GPU_ONLY,
    DYNAMIC_CPU_TO_GPU,
 };
 
-enum class BufferType
+enum class GFXBufferType
 {
    VERTEX_BUFFER,
    INDEX_BUFFER,
@@ -26,12 +26,12 @@ enum class GFXIndexBufferType
    BITS_32
 };
 
-enum BufferAccessFlags : uint32_t
+enum GFXBufferAccessFlags : uint32_t
 {
    NONE
 };
 
-enum class PrimitiveType
+enum class GFXPrimitiveType
 {
    TRIANGLE_LIST,
    TRIANGLE_STRIP,
@@ -40,7 +40,7 @@ enum class PrimitiveType
    LINE_STRIP
 };
 
-enum class InputLayoutFormat
+enum class GFXInputLayoutFormat
 {
    FLOAT,
    BYTE,
@@ -60,7 +60,7 @@ enum GFXShaderStageBit
    FRAGMENT_BIT = 1 << VERTEX_BIT
 };
 
-enum class InputLayoutDivisor
+enum class GFXInputLayoutDivisor
 {
    PER_VERTEX,
    PER_INSTANCE
@@ -119,20 +119,20 @@ enum class GFXSamplerCompareMode
    NONE
 };
 
-enum class FillMode
+enum class GFXFillMode
 {
    SOLID,
    WIREFRAME
 };
 
-enum class CullMode
+enum class GFXCullMode
 {
    CULL_NONE,
    CULL_BACK,
    CULL_FRONT
 };
 
-enum class WindingMode
+enum class GFXWindingMode
 {
    CLOCKWISE,
    COUNTER_CLOCKWISE
@@ -142,9 +142,9 @@ enum class WindingMode
 
 struct GFXBufferDesc
 {
-   BufferType type;
+   GFXBufferType type;
    size_t sizeInBytes;
-   BufferUsageEnum usage;
+   GFXBufferUsageEnum usage;
    //uint32_t accessFlags;
    void* data;
 };
@@ -181,37 +181,37 @@ struct GFXDepthStencilStateDesc
 {
    struct GFXStencilDescriptor
    {
-      GFXCompareFunc stencilCompareOp;
-      GFXStencilFunc stencilFailFunc;
-      GFXStencilFunc depthPassFunc;
-      GFXStencilFunc depthFailFunc;
+      GFXCompareFunc stencilCompareOp = GFXCompareFunc::ALWAYS;
+      GFXStencilFunc stencilFailFunc = GFXStencilFunc::KEEP;
+      GFXStencilFunc depthPassFunc = GFXStencilFunc::KEEP;
+      GFXStencilFunc depthFailFunc = GFXStencilFunc::KEEP;
 
-      uint32_t stencilReadMask;
-      uint32_t stencilWriteMask;
-      uint32_t referenceValue;
+      uint32_t stencilReadMask = 0xFF;
+      uint32_t stencilWriteMask = 0xFF;
+      uint32_t referenceValue = 0;
    };
 
-   GFXCompareFunc depthCompareFunc;
-   bool enableDepthTest;
-   bool enableDepthWrite;
-   bool enableStencilTest;
+   GFXCompareFunc depthCompareFunc = GFXCompareFunc::LESS;
+   bool enableDepthTest = false;
+   bool enableDepthWrite = false;
 
+   bool enableStencilTest = false;
    GFXStencilDescriptor frontFaceStencil;
    GFXStencilDescriptor backFaceStencil;
 };
 
 struct GFXRasterizerStateDesc
 {
-   WindingMode windingMode;
-   FillMode fillMode;
-   CullMode cullMode;
+   GFXWindingMode windingMode = GFXWindingMode::COUNTER_CLOCKWISE;
+   GFXFillMode fillMode = GFXFillMode::SOLID;
+   GFXCullMode cullMode = GFXCullMode::CULL_NONE;
 };
 
 struct GFXInputLayoutElementDesc
 {
    uint32_t slot;
-   InputLayoutFormat type;
-   InputLayoutDivisor divisor;
+   GFXInputLayoutFormat type;
+   GFXInputLayoutDivisor divisor;
    uint32_t bufferBinding;
    uint32_t offset;
    uint32_t count;
@@ -235,6 +235,6 @@ struct GFXPipelineDesc
    GFXShaderDesc* shadersStages;
    uint32_t shaderStageCount;
    GFXInputLayoutDesc inputLayout;
-   PrimitiveType primitiveType;
+   GFXPrimitiveType primitiveType;
 };
 

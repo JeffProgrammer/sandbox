@@ -98,9 +98,10 @@ PipelineHandle GFXGLDevice::createPipeline(const GFXPipelineDesc& desc)
       const GFXInputLayoutElementDesc& attribute = desc.inputLayout.descs[i];
       GLuint slot = (GLuint)attribute.slot;
 
+      glEnableVertexAttribArray(slot);
       glVertexAttribFormat(slot, attribute.count, _getInputLayoutType(attribute.type), GL_FALSE, attribute.offset);
       glVertexAttribBinding(slot, attribute.bufferBinding);
-      glVertexBindingDivisor(slot, attribute.divisor == InputLayoutDivisor::PER_VERTEX ? 0 : 1);
+      glVertexBindingDivisor(slot, attribute.divisor == GFXInputLayoutDivisor::PER_VERTEX ? 0 : 1);
    }
 
    glBindVertexArray(mState.globalVAO);
@@ -137,11 +138,11 @@ StateBlockHandle GFXGLDevice::createRasterizerState(const GFXRasterizerStateDesc
 
    switch (desc.cullMode)
    {
-   case CullMode::CULL_NONE:
+   case GFXCullMode::CULL_NONE:
       state.enableFaceCulling = false;
       state.cullMode = GL_NONE;
       break;
-   case CullMode::CULL_BACK:
+   case GFXCullMode::CULL_BACK:
       state.enableFaceCulling = true;
       state.cullMode = GL_BACK;
       break;
@@ -150,8 +151,8 @@ StateBlockHandle GFXGLDevice::createRasterizerState(const GFXRasterizerStateDesc
       state.cullMode = GL_FRONT;
    }
 
-   state.windingOrder = desc.windingMode == WindingMode::CLOCKWISE ? GL_CW : GL_CCW;
-   state.polygonFillMode = desc.fillMode == FillMode::SOLID ? GL_FILL : GL_LINE;
+   state.windingOrder = desc.windingMode == GFXWindingMode::CLOCKWISE ? GL_CW : GL_CCW;
+   state.polygonFillMode = desc.fillMode == GFXFillMode::SOLID ? GL_FILL : GL_LINE;
 
    StateBlockHandle handle = mRasterizerHandleCounter++;
    mRasterizerStates[handle] = std::move(state);
@@ -603,13 +604,13 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
    }
 }
 
-GLenum GFXGLDevice::_getBufferUsage(BufferUsageEnum usage) const
+GLenum GFXGLDevice::_getBufferUsage(GFXBufferUsageEnum usage) const
 {
    switch (usage)
    {
-   case BufferUsageEnum::STATIC_GPU_ONLY: 
+   case GFXBufferUsageEnum::STATIC_GPU_ONLY: 
       return GL_STATIC_DRAW;
-   case BufferUsageEnum::DYNAMIC_CPU_TO_GPU: 
+   case GFXBufferUsageEnum::DYNAMIC_CPU_TO_GPU: 
       return GL_DYNAMIC_DRAW;
    }
 
@@ -617,15 +618,15 @@ GLenum GFXGLDevice::_getBufferUsage(BufferUsageEnum usage) const
    return 0;
 }
 
-GLenum GFXGLDevice::_getBufferType(BufferType type) const
+GLenum GFXGLDevice::_getBufferType(GFXBufferType type) const
 {
    switch (type)
    {
-   case BufferType::VERTEX_BUFFER:
+   case GFXBufferType::VERTEX_BUFFER:
       return GL_ARRAY_BUFFER;
-   case BufferType::INDEX_BUFFER:
+   case GFXBufferType::INDEX_BUFFER:
       return GL_ELEMENT_ARRAY_BUFFER;
-   case BufferType::CONSTANT_BUFFER:
+   case GFXBufferType::CONSTANT_BUFFER:
       return GL_UNIFORM_BUFFER;
    }
 
@@ -633,19 +634,19 @@ GLenum GFXGLDevice::_getBufferType(BufferType type) const
    return 0;
 }
 
-GLenum GFXGLDevice::_getPrimitiveType(PrimitiveType primitiveType) const
+GLenum GFXGLDevice::_getPrimitiveType(GFXPrimitiveType primitiveType) const
 {
    switch (primitiveType)
    {
-   case PrimitiveType::TRIANGLE_LIST:
+   case GFXPrimitiveType::TRIANGLE_LIST:
       return GL_TRIANGLES;
-   case PrimitiveType::TRIANGLE_STRIP:
+   case GFXPrimitiveType::TRIANGLE_STRIP:
       return GL_TRIANGLE_STRIP;
-   case PrimitiveType::POINT_LIST:
+   case GFXPrimitiveType::POINT_LIST:
       return GL_POINTS;
-   case PrimitiveType::LINE_LIST:
+   case GFXPrimitiveType::LINE_LIST:
       return GL_LINES;
-   case PrimitiveType::LINE_STRIP:
+   case GFXPrimitiveType::LINE_STRIP:
       return GL_LINE_STRIP;
    }
 
@@ -719,17 +720,17 @@ GLenum GFXGLDevice::_getShaderType(GFXShaderType type) const
    return 0;
 }
 
-GLenum GFXGLDevice::_getInputLayoutType(InputLayoutFormat format) const
+GLenum GFXGLDevice::_getInputLayoutType(GFXInputLayoutFormat format) const
 {
    switch (format)
    {
-   case InputLayoutFormat::FLOAT:
+   case GFXInputLayoutFormat::FLOAT:
       return GL_FLOAT;
-   case InputLayoutFormat::BYTE:
+   case GFXInputLayoutFormat::BYTE:
       return GL_BYTE;
-   case InputLayoutFormat::SHORT:
+   case GFXInputLayoutFormat::SHORT:
       return GL_SHORT;
-   case InputLayoutFormat::INT:
+   case GFXInputLayoutFormat::INT:
       return GL_INT;
    }
 
