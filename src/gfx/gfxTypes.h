@@ -7,6 +7,11 @@ typedef unsigned int TextureHandle;
 typedef unsigned int SamplerHandle;
 typedef unsigned int ResourceHandle;
 
+enum
+{
+   MAX_COLOR_ATTACHMENTS = 8
+};
+
 enum class GFXBufferUsageEnum
 {
    STATIC_GPU_ONLY,
@@ -238,3 +243,48 @@ struct GFXPipelineDesc
    GFXPrimitiveType primitiveType;
 };
 
+enum class GFXStoreAttachmentAction
+{
+   DONT_CARE, // render to render buffer
+   PRESERVE_TO_TEXTURE // render to texture
+};
+
+enum class GFXLoadAttachmentAction
+{
+   DONT_CARE, // don't clear, just write new pixels
+   CLEAR, // clear it with a default value
+};
+
+struct GFXColorRenderPassAttachment
+{
+   TextureHandle texture;
+   GFXStoreAttachmentAction storeAction;
+   GFXLoadAttachmentAction loadAction;
+   float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+};
+
+struct GFXDepthRenderPassAttachment
+{
+   TextureHandle texture;
+   GFXStoreAttachmentAction storeAction;
+   GFXLoadAttachmentAction loadAction;
+   float clearDepth = 1.0;
+};
+
+struct GFXStencilRenderPassAttachment
+{
+   TextureHandle texture;
+   GFXStoreAttachmentAction storeAction;
+   GFXLoadAttachmentAction loadAction;
+   float clearStencil = 0.0;
+};
+
+struct GFXRenderPassDesc
+{
+   GFXDepthRenderPassAttachment depthAttachment = {};
+   GFXStencilRenderPassAttachment sstencilAttachment = {};
+   GFXColorRenderPassAttachment colorAttachments[MAX_COLOR_ATTACHMENTS];
+   uint32_t count;
+   bool depthAttachmentEnabled = false;
+   bool stencilAttachmentEnabled = false;
+};
