@@ -64,6 +64,16 @@ class GFXGLDevice : public GFXDevice
 
    };
 
+   struct GLTexture
+   {
+      GLuint texture;
+      GLenum type;
+      GLenum internalFormat;
+      int32_t width;
+      int32_t height;
+      int32_t levels;
+   };
+
    struct
    {
       GLuint primitiveType = 0;
@@ -78,6 +88,41 @@ class GFXGLDevice : public GFXDevice
    struct GLSampler
    {
       GLuint handle;
+   };
+
+   struct GLRenderPass
+   {
+      struct GLColorRenderTarget
+      {
+         GLuint textureId;
+         GFXLoadAttachmentAction loadAction;
+         GLenum attachment;
+         float clearColor[4];
+      };
+
+      struct GLDepthRenderTarget
+      {
+         GLuint textureId;
+         GFXLoadAttachmentAction loadAction;
+         float clearDepth;
+      };
+      
+      struct GLStencilRenderTarget
+      {
+         GLuint textureId;
+         GFXLoadAttachmentAction loadAction;
+         int32_t clearStencil;
+      };
+
+      GLColorRenderTarget colorTargets[8];
+      GLDepthRenderTarget depthTarget;
+      GLStencilRenderTarget stencilTarget;
+
+      GLuint drawBuffers[8] = {};
+      GLuint numColorAttachments = 0;
+      GLuint fbo = 0;
+      bool enableDepthAttachment = false;
+      bool enableStencilAttachment = false;
    };
 
    struct
@@ -103,6 +148,12 @@ class GFXGLDevice : public GFXDevice
    std::unordered_map<SamplerHandle, GLSampler> mSamplers;
    int mSamplerHandleCounter = 0;
 
+   std::unordered_map<RenderPassHandle, GLRenderPass> mRenderPasses;
+   int mRenderPassHandleCounter = 0;
+
+   std::unordered_map<TextureHandle, GLTexture> mTextures;
+   int mTextureHandleCounter = 0;
+
 public:
    GFXGLDevice();
    virtual ~GFXGLDevice();
@@ -112,6 +163,9 @@ public:
 
    virtual PipelineHandle createPipeline(const GFXPipelineDesc& desc) override;
    virtual void deletePipeline(PipelineHandle handle) override;
+
+   virtual RenderPassHandle createRenderPass(const GFXRenderPassDesc& desc) override;
+   virtual void deleteRenderPass(RenderPassHandle handle) override;
 
    virtual StateBlockHandle createRasterizerState(const GFXRasterizerStateDesc& desc) override;
    virtual StateBlockHandle createDepthStencilState(const GFXDepthStencilStateDesc& desc) override;
@@ -129,6 +183,7 @@ public:
 
    virtual void executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count) override;
 
+   virtual void present(RenderPassHandle handle, int width, int height);
 private:
    GLenum _getBufferUsage(GFXBufferUsageEnum usage) const;
    GLenum _getBufferType(GFXBufferType type) const;
@@ -143,4 +198,7 @@ private:
    GLenum _getSamplerMagFilterMode(GFXSamplerMagFilterMode mode) const;
    GLenum _getSamplerMinFilteRMode(GFXSamplerMinFilterMode mode) const;
    GLenum _getSamplerCompareMode(GFXSamplerCompareMode mode) const;
+
+   GLenum _getTextureType(GFXTextureType mode) const;
+   GLenum _getTextureInternalFormat(GFXTextureInternalFormat format) const;
 };

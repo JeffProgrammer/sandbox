@@ -94,7 +94,6 @@ PipelineHandle GFXGLDevice::createPipeline(const GFXPipelineDesc& desc)
    // see examples here: https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_vertex_attrib_binding.txt
    for (int i = 0; i < desc.inputLayout.count; i++)
    {
-      // Note: semantic name is our slot (for DX compatible purposes?)
       const GFXInputLayoutElementDesc& attribute = desc.inputLayout.descs[i];
       GLuint slot = (GLuint)attribute.slot;
 
@@ -123,6 +122,87 @@ void GFXGLDevice::deletePipeline(PipelineHandle handle)
 
 
       mPipelines.erase(found);
+   }
+#ifdef GFX_DEBUG
+   else
+   {
+      assert(false);
+   }
+#endif
+}
+
+RenderPassHandle GFXGLDevice::createRenderPass(const GFXRenderPassDesc& desc)
+{
+   GLRenderPass renderPass = {};
+
+   glGenFramebuffers(1, &renderPass.fbo);
+   glBindFramebuffer(GL_FRAMEBUFFER, renderPass.fbo);
+
+   renderPass.numColorAttachments = desc.colorAttachmentCount;
+
+   if (renderPass.numColorAttachments > 8)
+   {
+      // No more than 8 attachments!
+      abort();
+   }
+
+   for (int i = 0; i < desc.colorAttachmentCount; i++)
+   {
+      GLuint colorAttachment = GL_COLOR_ATTACHMENT0 + i;
+      GLuint textureId = mTextures[desc.colorAttachments[i].texture].texture;
+
+      glFramebufferTexture(GL_FRAMEBUFFER, colorAttachment, textureId, 0);
+
+      renderPass.drawBuffers[i] = colorAttachment;
+      renderPass.colorTargets[i].textureId = textureId;
+      renderPass.colorTargets[i].attachment = colorAttachment;
+      renderPass.colorTargets[i].loadAction = desc.colorAttachments[i].loadAction;
+      renderPass.colorTargets[i].clearColor[0] = desc.colorAttachments[i].clearColor[0];
+      renderPass.colorTargets[i].clearColor[1] = desc.colorAttachments[i].clearColor[1];
+      renderPass.colorTargets[i].clearColor[2] = desc.colorAttachments[i].clearColor[2];
+      renderPass.colorTargets[i].clearColor[3] = desc.colorAttachments[i].clearColor[3];
+   }
+
+   if (desc.depthAttachmentEnabled)
+   {
+      GLuint textureId = mTextures[desc.depthAttachment.texture].texture;
+      glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, textureId, 0);
+
+      renderPass.enableDepthAttachment = true;
+      renderPass.depthTarget.textureId = textureId;
+      renderPass.depthTarget.loadAction = desc.depthAttachment.loadAction;
+      renderPass.depthTarget.clearDepth = desc.depthAttachment.clearDepth;
+   }
+
+   if (desc.stencilAttachmentEnabled)
+   {
+      GLuint textureId = mTextures[desc.stencilAttachment.texture].texture;
+      glFramebufferTexture(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, textureId, 0);
+
+      renderPass.enableStencilAttachment = true;
+      renderPass.stencilTarget.textureId = textureId;
+      renderPass.stencilTarget.loadAction = desc.stencilAttachment.loadAction;
+      renderPass.stencilTarget.clearStencil = desc.stencilAttachment.clearStencil;
+   }
+
+   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+   {
+      abort();
+   }
+
+   RenderPassHandle returnHandle = mRenderPassHandleCounter++;
+   mRenderPasses[returnHandle] = std::move(renderPass);
+   return returnHandle;
+}
+
+void GFXGLDevice::deleteRenderPass(RenderPassHandle handle)
+{
+   const auto& found = mRenderPasses.find(handle);
+   if (found != mRenderPasses.end())
+   {
+
+
+      mRenderPasses.erase(found);
    }
 #ifdef GFX_DEBUG
    else
@@ -245,13 +325,48 @@ void GFXGLDevice::deleteSampler(SamplerHandle handle)
 
 TextureHandle GFXGLDevice::createTexture(const GFXTextureStateDesc& desc)
 {
-   assert(false && "GFXGLDevice::createTexture() is not implemented");
-   return 0;
+   GLTexture texture = {};
+   texture.width = desc.width;
+   texture.height = desc.height;
+   texture.levels = desc.levels;
+   texture.type = _getTextureType(desc.type);
+   texture.internalFormat = _getTextureInternalFormat(desc.internalFormat);
+
+   glGenTextures(1, &texture.texture);
+   glBindTexture(texture.type, texture.texture);
+   
+   switch (texture.type)
+   {
+   case GL_TEXTURE_1D:
+      glTexStorage1D(GL_TEXTURE_1D, texture.levels, texture.internalFormat, texture.width);
+      break;
+   case GL_TEXTURE_2D:
+      glTexStorage2D(GL_TEXTURE_2D, texture.levels, texture.internalFormat, texture.width, texture.height);
+      break;
+   default:
+      abort();
+   }
+
+   TextureHandle textureHandle = mTextureHandleCounter++;
+   mTextures[textureHandle] = std::move(texture);
+   return textureHandle;
 }
 
 void GFXGLDevice::deleteTexture(TextureHandle handle)
 {
-   assert(false && "GFXGLDevice::deleteTexture() is not implemented");
+   const auto& found = mTextures.find(handle);
+   if (found != mTextures.end())
+   {
+      glDeleteTextures(1, &found->second.texture);
+
+      mTextures.erase(found);
+   }
+#ifdef GFX_DEBUG
+   else
+   {
+      assert(false);
+   }
+#endif
 }
 
 void* GFXGLDevice::mapBuffer(BufferHandle handle, uint32_t offset, uint32_t size)
@@ -409,6 +524,48 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
             break;
          }
 
+         case CommandType::BindRenderPass:
+         {
+            const RenderPassHandle handle = static_cast<RenderPassHandle>(cmdBuffer[offset++]);
+            const GFXGLDevice::GLRenderPass& renderPass = mRenderPasses[handle];
+
+            glBindFramebuffer(GL_FRAMEBUFFER, renderPass.fbo);
+            
+            GLenum drawBuffers[8] = { GL_NONE, GL_NONE, GL_NONE, GL_NONE, GL_NONE, GL_NONE, GL_NONE, GL_NONE };
+            for (int i = 0; i < renderPass.numColorAttachments; ++i)
+               drawBuffers[i] = renderPass.colorTargets[i].attachment;
+
+            glDrawBuffers(renderPass.numColorAttachments, drawBuffers);
+
+
+            for (int i = 0; i < renderPass.numColorAttachments; ++i)
+            {
+               const GFXGLDevice::GLRenderPass::GLColorRenderTarget& rt = renderPass.colorTargets[i];
+               if (rt.loadAction == GFXLoadAttachmentAction::CLEAR)
+               {
+                  glClearBufferfv(GL_COLOR, i, rt.clearColor);
+               }
+            }
+
+            if (renderPass.enableDepthAttachment)
+            {
+               if (renderPass.depthTarget.loadAction == GFXLoadAttachmentAction::CLEAR)
+               {
+                  glClearBufferfv(GL_DEPTH, 0, &renderPass.depthTarget.clearDepth);
+               }
+            }
+
+            if (renderPass.enableStencilAttachment)
+            {
+               if (renderPass.stencilTarget.loadAction == GFXLoadAttachmentAction::CLEAR)
+               {
+                  glClearBufferiv(GL_STENCIL, 0, &renderPass.stencilTarget.clearStencil);
+               }
+            }
+
+            break;
+         }
+
          case CommandType::BindPipeline:
          {
             const BufferHandle handle = static_cast<BufferHandle>(cmdBuffer[offset++]);
@@ -433,12 +590,6 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
             const int count = pushC.size / PUSH_CONSTANT_STRIDE;
 
             glUniform4fv(mState.pushConstantLocation, count, (const GLfloat*)&pushC.data[0]);
-            break;
-         }
-
-         case CommandType::BindDescriptorSets:
-         {
-            //https://developer.nvidia.com/vulkan-shader-resource-binding
             break;
          }
 
@@ -602,6 +753,30 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
    done:
       ;
    }
+}
+
+void GFXGLDevice::present(RenderPassHandle handle, int width, int height)
+{
+   const auto& renderPass = mRenderPasses[handle];
+
+   GLuint flags = GL_NONE;
+   if (renderPass.numColorAttachments > 0)
+      flags |= GL_COLOR_BUFFER_BIT;
+   if (renderPass.enableDepthAttachment)
+      flags |= GL_DEPTH_BUFFER_BIT;
+   if (renderPass.enableStencilAttachment)
+      flags |= GL_STENCIL_BUFFER_BIT;
+
+   if (flags == GL_NONE)
+   {
+      // must have some kind of attachment!
+      abort();
+   }
+
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+   glBindFramebuffer(GL_READ_FRAMEBUFFER, renderPass.fbo);
+   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+   glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, flags, GL_NEAREST);
 }
 
 GLenum GFXGLDevice::_getBufferUsage(GFXBufferUsageEnum usage) const
@@ -829,4 +1004,36 @@ GLuint GFXGLDevice::_createShaderProgram(const GFXShaderDesc* shader, uint32_t c
    validateShaderLinkCompilation(shaderProgram);
 
    return shaderProgram;
+}
+
+GLenum GFXGLDevice::_getTextureType(GFXTextureType mode) const
+{
+   switch (mode)
+   {
+   case GFXTextureType::TEXTURE_1D:
+      return GL_TEXTURE_1D;
+   case GFXTextureType::TEXTURE_2D:
+      return GL_TEXTURE_2D;
+   case GFXTextureType::TEXTURE_3D:
+      return GL_TEXTURE_3D;
+   case GFXTextureType::TEXTURE_CUBEMAP:
+      return GL_TEXTURE_CUBE_MAP;
+   }
+
+   // error
+   return 0;
+}
+
+GLenum GFXGLDevice::_getTextureInternalFormat(GFXTextureInternalFormat format) const
+{
+   switch (format)
+   {
+   case GFXTextureInternalFormat::DEPTH_16:
+      return GL_DEPTH_COMPONENT16;
+   case GFXTextureInternalFormat::RGBA8:
+      return GL_RGBA8;
+   }
+
+   // error
+   return 0;
 }

@@ -15,6 +15,9 @@ public:
    virtual PipelineHandle createPipeline(const GFXPipelineDesc& desc) = 0;
    virtual void deletePipeline(PipelineHandle handle) = 0;
 
+   virtual RenderPassHandle createRenderPass(const GFXRenderPassDesc& desc) = 0;
+   virtual void deleteRenderPass(RenderPassHandle handle) = 0;
+
    virtual StateBlockHandle createRasterizerState(const GFXRasterizerStateDesc& desc) = 0;
    virtual StateBlockHandle createDepthStencilState(const GFXDepthStencilStateDesc& desc) = 0;
    virtual StateBlockHandle createBlendState(const GFXBlendStateDesc& desc) = 0;
@@ -30,4 +33,5 @@ public:
    virtual void unmapBuffer(BufferHandle handle) = 0;
 
    virtual void executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count) = 0;
+   virtual void present(RenderPassHandle handle, int width, int height) = 0;
 };

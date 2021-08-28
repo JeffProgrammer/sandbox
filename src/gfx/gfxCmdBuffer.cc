@@ -59,6 +59,14 @@ void GFXCmdBuffer::setBlendState(const StateBlockHandle handle)
     cmdBuffer[offset++] = handle;
 }
 
+void GFXCmdBuffer::bindRenderPass(RenderPassHandle handle)
+{
+   int type = (int)CommandType::BindRenderPass;
+   cmdBuffer[offset++] = type;
+
+   cmdBuffer[offset++] = handle;
+}
+
 void GFXCmdBuffer::bindPipeline(PipelineHandle handle)
 {
     int type = (int)CommandType::BindPipeline;

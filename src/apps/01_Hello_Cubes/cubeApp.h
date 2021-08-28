@@ -57,6 +57,10 @@ private:
    BufferHandle cameraBufferHandle;
    BufferHandle sunBufferHandle;
 
+   RenderPassHandle renderPassHandle;
+   TextureHandle colorRenderPassAttachmentHandle;
+   TextureHandle depthRenderPassAttachmentHandle;
+
    int cameraUboLocation;
    int sunUboLocation;
 };

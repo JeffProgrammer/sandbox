@@ -6,6 +6,7 @@ typedef unsigned int StateBlockHandle;
 typedef unsigned int TextureHandle;
 typedef unsigned int SamplerHandle;
 typedef unsigned int ResourceHandle;
+typedef unsigned int RenderPassHandle;
 
 enum
 {
@@ -143,6 +144,20 @@ enum class GFXWindingMode
    COUNTER_CLOCKWISE
 };
 
+enum class GFXTextureType
+{
+   TEXTURE_1D,
+   TEXTURE_2D,
+   TEXTURE_3D,
+   TEXTURE_CUBEMAP
+};
+
+enum class GFXTextureInternalFormat
+{
+   RGBA8,
+   DEPTH_16
+};
+
 // devices
 
 struct GFXBufferDesc
@@ -179,7 +194,11 @@ struct GFXSamplerStateDesc
 
 struct GFXTextureStateDesc
 {
-
+   GFXTextureType type;
+   GFXTextureInternalFormat internalFormat;
+   int32_t levels;
+   int32_t width;
+   int32_t height;
 };
 
 struct GFXDepthStencilStateDesc
@@ -243,6 +262,9 @@ struct GFXPipelineDesc
    GFXPrimitiveType primitiveType;
 };
 
+// TODO(Jeff):
+// FOR NOW not used in GL, for Metal...
+// GL can probably eventually use them with glInvalidateFramebuffer
 enum class GFXStoreAttachmentAction
 {
    DONT_CARE, // render to render buffer
@@ -258,7 +280,7 @@ enum class GFXLoadAttachmentAction
 struct GFXColorRenderPassAttachment
 {
    TextureHandle texture;
-   GFXStoreAttachmentAction storeAction;
+   //GFXStoreAttachmentAction storeAction;
    GFXLoadAttachmentAction loadAction;
    float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 };
@@ -266,7 +288,7 @@ struct GFXColorRenderPassAttachment
 struct GFXDepthRenderPassAttachment
 {
    TextureHandle texture;
-   GFXStoreAttachmentAction storeAction;
+   //GFXStoreAttachmentAction storeAction;
    GFXLoadAttachmentAction loadAction;
    float clearDepth = 1.0;
 };
@@ -274,17 +296,17 @@ struct GFXDepthRenderPassAttachment
 struct GFXStencilRenderPassAttachment
 {
    TextureHandle texture;
-   GFXStoreAttachmentAction storeAction;
+   //GFXStoreAttachmentAction storeAction;
    GFXLoadAttachmentAction loadAction;
-   float clearStencil = 0.0;
+   int32_t clearStencil = 0;
 };
 
 struct GFXRenderPassDesc
 {
    GFXDepthRenderPassAttachment depthAttachment = {};
-   GFXStencilRenderPassAttachment sstencilAttachment = {};
+   GFXStencilRenderPassAttachment stencilAttachment = {};
    GFXColorRenderPassAttachment colorAttachments[MAX_COLOR_ATTACHMENTS];
-   uint32_t count;
+   uint32_t colorAttachmentCount = 0;
    bool depthAttachmentEnabled = false;
    bool stencilAttachmentEnabled = false;
 };

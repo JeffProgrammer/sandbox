@@ -77,6 +77,46 @@ void CubeApplication::initGL()
    cmdBuffer = new GFXCmdBuffer();
 
    {
+      GFXTextureStateDesc colorTexDesc = {};
+      colorTexDesc.height = windowHeight;
+      colorTexDesc.width = windowWidth;
+      colorTexDesc.type = GFXTextureType::TEXTURE_2D;
+      colorTexDesc.levels = 1;
+      colorTexDesc.internalFormat = GFXTextureInternalFormat::RGBA8;
+
+      GFXTextureStateDesc depthTexDesc = {};
+      depthTexDesc.height = windowHeight;
+      depthTexDesc.width = windowWidth;
+      depthTexDesc.type = GFXTextureType::TEXTURE_2D;
+      depthTexDesc.levels = 1;
+      depthTexDesc.internalFormat = GFXTextureInternalFormat::DEPTH_16;
+
+      colorRenderPassAttachmentHandle = graphicsDevice->createTexture(colorTexDesc);
+      depthRenderPassAttachmentHandle = graphicsDevice->createTexture(depthTexDesc);
+
+      GFXColorRenderPassAttachment colorAttach = {};
+      colorAttach.clearColor[0] = 0.0f;
+      colorAttach.clearColor[1] = 0.0f;
+      colorAttach.clearColor[2] = 0.0f;
+      colorAttach.clearColor[3] = 1.0f;
+      colorAttach.loadAction = GFXLoadAttachmentAction::CLEAR;
+      colorAttach.texture = colorRenderPassAttachmentHandle;
+
+      GFXDepthRenderPassAttachment depthAttach = {};
+      depthAttach.clearDepth = 1.0;
+      depthAttach.loadAction = GFXLoadAttachmentAction::CLEAR;
+      depthAttach.texture = depthRenderPassAttachmentHandle;
+
+      GFXRenderPassDesc renderPassState;
+      renderPassState.colorAttachmentCount = 1;
+      renderPassState.colorAttachments[0] = std::move(colorAttach);
+      renderPassState.depthAttachmentEnabled = true;
+      renderPassState.depthAttachment = std::move(depthAttach);
+
+      renderPassHandle = graphicsDevice->createRenderPass(renderPassState);
+   }
+
+   {
       GFXRasterizerStateDesc rasterState;
       rasterState.cullMode = GFXCullMode::CULL_FRONT;
       rasterState.windingMode = GFXWindingMode::CLOCKWISE;
@@ -191,6 +231,10 @@ void CubeApplication::destroyGL()
    graphicsDevice->deleteBuffer(cameraBufferHandle);
    graphicsDevice->deleteBuffer(sunBufferHandle);
    graphicsDevice->deletePipeline(cubePipelineHandle);
+   
+   graphicsDevice->deleteTexture(colorRenderPassAttachmentHandle);
+   graphicsDevice->deleteTexture(depthRenderPassAttachmentHandle);
+   graphicsDevice->deleteRenderPass(renderPassHandle);
 
    delete cmdBuffer;
    delete graphicsDevice;
@@ -204,12 +248,9 @@ void CubeApplication::render(double dt)
 
    cmdBuffer->begin();
 
+   cmdBuffer->bindRenderPass(renderPassHandle);
    cmdBuffer->setViewport(0, 0, windowWidth, windowHeight);
    cmdBuffer->setScissor(0, 0, windowWidth, windowHeight);
-
-   // TODO, add framebuffer binding and clearing...concept of a 'render pass'...
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   glClearColor(0.0, 0.0, 0.0, 1.0);
 
    cmdBuffer->setRasterizerState(rasterizerStateHandle);
    cmdBuffer->setDepthStencilState(depthStateHandle);
@@ -227,6 +268,9 @@ void CubeApplication::render(double dt)
    const GFXCmdBuffer* buffer[1];
    buffer[0] = cmdBuffer;
    graphicsDevice->executeCmdBuffers(buffer, 1);
+
+   // and now we present our render pass
+   graphicsDevice->present(renderPassHandle, windowWidth, windowHeight);
 }
 
 void CubeApplication::onRenderImGUI(double dt)

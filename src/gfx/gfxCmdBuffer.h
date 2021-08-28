@@ -13,10 +13,11 @@ enum class CommandType
    RasterizerState,
    DepthStencilState,
    BlendState,
+
+   BindRenderPass,
    BindPipeline,
 
    BindPushConstants,
-   BindDescriptorSets,
    BindVertexBuffer,
    BindVertexBuffers,
    BindIndexBuffer,
@@ -108,6 +109,7 @@ public:
     void setDepthStencilState(const StateBlockHandle handle);
     void setBlendState(const StateBlockHandle handle);
 
+    void bindRenderPass(RenderPassHandle handle);
     void bindPipeline(PipelineHandle handle);
 
     void bindPushConstants(uint32_t offset, uint32_t size, GFXShaderStageBit shaderStageBits, const void* data);
