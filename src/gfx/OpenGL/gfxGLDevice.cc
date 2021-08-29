@@ -233,6 +233,7 @@ StateBlockHandle GFXGLDevice::createRasterizerState(const GFXRasterizerStateDesc
 
    state.windingOrder = desc.windingMode == GFXWindingMode::CLOCKWISE ? GL_CW : GL_CCW;
    state.polygonFillMode = desc.fillMode == GFXFillMode::SOLID ? GL_FILL : GL_LINE;
+   state.enableDynamicPointSize = desc.enableDynamicPointSize;
 
    StateBlockHandle handle = mRasterizerHandleCounter++;
    mRasterizerStates[handle] = std::move(state);
@@ -441,6 +442,15 @@ void GFXGLDevice::executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count)
          {
             int handle = cmdBuffer[offset++];
             const GLRasterizerState& rasterState = mRasterizerStates[handle];
+
+            if (rasterState.enableDynamicPointSize)
+            {
+               glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+            }
+            else
+            {
+               glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+            }
 
             if (rasterState.enableFaceCulling)
             {

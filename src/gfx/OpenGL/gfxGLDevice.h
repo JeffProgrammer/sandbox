@@ -31,6 +31,7 @@ class GFXGLDevice : public GFXDevice
    struct GLRasterizerState
    {
       bool enableFaceCulling;
+      bool enableDynamicPointSize;
       GLenum cullMode;
       GLenum windingOrder;
       GLenum polygonFillMode;

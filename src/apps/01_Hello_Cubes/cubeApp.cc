@@ -121,6 +121,7 @@ void CubeApplication::initGL()
       rasterState.cullMode = GFXCullMode::CULL_FRONT;
       rasterState.windingMode = GFXWindingMode::CLOCKWISE;
       rasterState.fillMode = GFXFillMode::SOLID;
+      rasterState.enableDynamicPointSize = false;
 
       rasterizerStateHandle = graphicsDevice->createRasterizerState(rasterState);
    }
@@ -226,6 +227,9 @@ void CubeApplication::initUBOs()
 
 void CubeApplication::destroyGL()
 {
+   graphicsDevice->deleteStateBlock(depthStateHandle);
+   graphicsDevice->deleteStateBlock(rasterizerStateHandle);
+
    graphicsDevice->deleteBuffer(cubeVertexBufferHandle);
    graphicsDevice->deleteBuffer(cubeIndexBufferHandle);
    graphicsDevice->deleteBuffer(cameraBufferHandle);
@@ -279,10 +283,14 @@ void CubeApplication::onRenderImGUI(double dt)
    ImGui::Begin("Debug Information");
    ImGui::SetWindowSize(ImVec2(400, 120));
    ImGui::Text("Frame Rate: %.1f FPS", ImGui::GetIO().Framerate);
+
+#ifdef GFX_OPENGL
    ImGui::Separator();
    ImGui::Text("GL Renderer: %s", glGetString(GL_RENDERER));
    ImGui::Text("GL Vendor: %s", glGetString(GL_VENDOR));
    ImGui::Text("GL Version: %s", glGetString(GL_VERSION));
+#endif
+
    ImGui::End();
    ImGui::Render();
 }

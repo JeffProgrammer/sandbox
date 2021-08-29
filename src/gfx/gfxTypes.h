@@ -229,6 +229,7 @@ struct GFXRasterizerStateDesc
    GFXWindingMode windingMode = GFXWindingMode::COUNTER_CLOCKWISE;
    GFXFillMode fillMode = GFXFillMode::SOLID;
    GFXCullMode cullMode = GFXCullMode::CULL_NONE;
+   bool enableDynamicPointSize = false; // DX11/12 doesn't have this
 };
 
 struct GFXInputLayoutElementDesc

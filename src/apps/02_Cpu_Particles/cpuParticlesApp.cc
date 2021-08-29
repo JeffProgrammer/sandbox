@@ -1,10 +1,10 @@
 #include <stdio.h>
-#include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/random.hpp>
 #include <imgui.h>
 #include "apps/02_Cpu_Particles/cpuParticlesApp.h"
-#include "gl/shader.h"
+#include "gfx/gfxCmdBuffer.h"
+#include "gfx/OpenGL/gfxGLDevice.h"
 
 IMPLEMENT_APPLICATION(CpuParticlesApp);
 
@@ -108,17 +108,77 @@ void CpuParticlesApp::updatePerspectiveMatrix()
 
 void CpuParticlesApp::initGL()
 {
-   glGenVertexArrays(1, &vao);
-   glBindVertexArray(vao);
+   graphicsDevice = new GFXGLDevice();
+   cmdBuffer = new GFXCmdBuffer();
 
-   glGenBuffers(1, &particleVbo);
-   glBindBuffer(GL_ARRAY_BUFFER, particleVbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(glParticles), NULL, GL_STREAM_DRAW);
+   {
+      GFXTextureStateDesc colorTexDesc = {};
+      colorTexDesc.height = windowHeight;
+      colorTexDesc.width = windowWidth;
+      colorTexDesc.type = GFXTextureType::TEXTURE_2D;
+      colorTexDesc.levels = 1;
+      colorTexDesc.internalFormat = GFXTextureInternalFormat::RGBA8;
 
-   glEnableVertexAttribArray(0);
-   glEnableVertexAttribArray(1);
-   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLParticle), (void*)offsetof(GLParticle, pos));
-   glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(GLParticle), (void*)offsetof(GLParticle, color));
+      GFXTextureStateDesc depthTexDesc = {};
+      depthTexDesc.height = windowHeight;
+      depthTexDesc.width = windowWidth;
+      depthTexDesc.type = GFXTextureType::TEXTURE_2D;
+      depthTexDesc.levels = 1;
+      depthTexDesc.internalFormat = GFXTextureInternalFormat::DEPTH_16;
+
+      colorRenderPassAttachmentHandle = graphicsDevice->createTexture(colorTexDesc);
+      depthRenderPassAttachmentHandle = graphicsDevice->createTexture(depthTexDesc);
+
+      GFXColorRenderPassAttachment colorAttach = {};
+      colorAttach.clearColor[0] = 0.0f;
+      colorAttach.clearColor[1] = 0.0f;
+      colorAttach.clearColor[2] = 0.0f;
+      colorAttach.clearColor[3] = 1.0f;
+      colorAttach.loadAction = GFXLoadAttachmentAction::CLEAR;
+      colorAttach.texture = colorRenderPassAttachmentHandle;
+
+      GFXDepthRenderPassAttachment depthAttach = {};
+      depthAttach.clearDepth = 1.0;
+      depthAttach.loadAction = GFXLoadAttachmentAction::CLEAR;
+      depthAttach.texture = depthRenderPassAttachmentHandle;
+
+      GFXRenderPassDesc renderPassState;
+      renderPassState.colorAttachmentCount = 1;
+      renderPassState.colorAttachments[0] = std::move(colorAttach);
+      renderPassState.depthAttachmentEnabled = true;
+      renderPassState.depthAttachment = std::move(depthAttach);
+
+      renderPassHandle = graphicsDevice->createRenderPass(renderPassState);
+   }
+
+   {
+      GFXRasterizerStateDesc rasterState;
+      rasterState.cullMode = GFXCullMode::CULL_FRONT;
+      rasterState.windingMode = GFXWindingMode::CLOCKWISE;
+      rasterState.fillMode = GFXFillMode::SOLID;
+      rasterState.enableDynamicPointSize = true;
+
+      rasterizerStateHandle = graphicsDevice->createRasterizerState(rasterState);
+   }
+
+   {
+      GFXDepthStencilStateDesc depthState;
+      depthState.enableDepthTest = true;
+      depthState.enableDepthWrite = true;
+      depthState.depthCompareFunc = GFXCompareFunc::LESS;
+
+      depthStateHandle = graphicsDevice->createDepthStencilState(depthState);
+   }
+
+   {
+      GFXBufferDesc cubeBuffer;
+      cubeBuffer.type = GFXBufferType::VERTEX_BUFFER;
+      cubeBuffer.usage = GFXBufferUsageEnum::DYNAMIC_CPU_TO_GPU;
+      cubeBuffer.sizeInBytes = sizeof(glParticles);
+      cubeBuffer.data = nullptr;
+
+      particleBufferHandle = graphicsDevice->createBuffer(cubeBuffer);
+   }
 
    initShader();
    initUBOs();
@@ -126,71 +186,107 @@ void CpuParticlesApp::initGL()
 
 void CpuParticlesApp::initUBOs()
 {
-   glGenBuffers(1, &cameraUbo);
-   glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
-   glBufferData(GL_UNIFORM_BUFFER, sizeof(CameraUbo), NULL, GL_DYNAMIC_DRAW);
+   GFXBufferDesc cameraBufferDesc;
+   cameraBufferDesc.type = GFXBufferType::CONSTANT_BUFFER;
+   cameraBufferDesc.usage = GFXBufferUsageEnum::DYNAMIC_CPU_TO_GPU;
+   cameraBufferDesc.sizeInBytes = sizeof(CameraUbo);
+   cameraBufferDesc.data = nullptr;
+
+   cameraBufferHandle = graphicsDevice->createBuffer(cameraBufferDesc);
 }
 
 void CpuParticlesApp::initShader()
 {
+   GFXInputLayoutElementDesc inputLayoutDescs[2];
+   inputLayoutDescs[0].slot = 0;
+   inputLayoutDescs[0].count = 3;
+   inputLayoutDescs[0].type = GFXInputLayoutFormat::FLOAT;
+   inputLayoutDescs[0].divisor = GFXInputLayoutDivisor::PER_VERTEX;
+   inputLayoutDescs[0].offset = 0;
+   inputLayoutDescs[0].bufferBinding = 0;
+
+   inputLayoutDescs[1].slot = 1;
+   inputLayoutDescs[1].count = 4;
+   inputLayoutDescs[1].type = GFXInputLayoutFormat::FLOAT;
+   inputLayoutDescs[1].divisor = GFXInputLayoutDivisor::PER_VERTEX;
+   inputLayoutDescs[1].offset = 12;
+   inputLayoutDescs[1].bufferBinding = 0;
+
+   GFXInputLayoutDesc inputLayout;
+   inputLayout.count = 2;
+   inputLayout.descs = inputLayoutDescs;
+
    char* vertShader = readShaderFile("apps/02_Cpu_Particles/shaders/particles.vert");
    char* fragShader = readShaderFile("apps/02_Cpu_Particles/shaders/particles.frag");
 
-   shaderProgram = createVertexAndFragmentShaderProgram(vertShader, fragShader);
+   GFXShaderDesc shaders[2];
+   shaders[0].type = GFXShaderType::VERTEX;
+   shaders[0].code = vertShader;
+   shaders[0].codeLength = strlen(vertShader);
 
-   free(vertShader);
-   free(fragShader);
+   shaders[1].type = GFXShaderType::FRAGMENT;
+   shaders[1].code = fragShader;
+   shaders[1].codeLength = strlen(fragShader);
 
-   uniformModelMatLocation = glGetUniformLocation(shaderProgram, "modelMatrix");
-   uniformCameraLocationBlock = glGetUniformBlockIndex(shaderProgram, "CameraBuffer");
+   GFXPipelineDesc pipelineDesc;
+   pipelineDesc.primitiveType = GFXPrimitiveType::POINT_LIST;
+   pipelineDesc.inputLayout = std::move(inputLayout);
+   pipelineDesc.shadersStages = shaders;
+   pipelineDesc.shaderStageCount = 2;
 
-   cameraUboLocation = 0;
-
-   glUniformBlockBinding(shaderProgram, uniformCameraLocationBlock, cameraUboLocation);
+   pipelineHandle = graphicsDevice->createPipeline(pipelineDesc);
 }
 
 void CpuParticlesApp::destroyGL()
 {
-   glUseProgram(0);
-   glDeleteProgram(shaderProgram);
+   graphicsDevice->deleteStateBlock(depthStateHandle);
+   graphicsDevice->deleteStateBlock(rasterizerStateHandle);
 
-   GLuint deleteBuffers[2] = { particleVbo, cameraUbo };
-   glDeleteBuffers(2, deleteBuffers);
+   graphicsDevice->deleteBuffer(particleBufferHandle);
+   graphicsDevice->deleteBuffer(cameraBufferHandle);
+   graphicsDevice->deletePipeline(pipelineHandle);
 
-   glBindVertexArray(0);
-   glDeleteVertexArrays(1, &vao);
+   graphicsDevice->deleteTexture(colorRenderPassAttachmentHandle);
+   graphicsDevice->deleteTexture(depthRenderPassAttachmentHandle);
+   graphicsDevice->deleteRenderPass(renderPassHandle);
+
+   delete cmdBuffer;
+   delete graphicsDevice;
 }
 
 void CpuParticlesApp::render(double dt)
 {
-   glViewport(0, 0, windowWidth, windowHeight);
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   glClearColor(0.0, 0.0, 0.0, 1.0);
+   char* pData = (char*)graphicsDevice->mapBuffer(cameraBufferHandle, 0, sizeof(CameraUbo));
+   memcpy(pData, &cameraData, sizeof(CameraUbo));
+   graphicsDevice->unmapBuffer(cameraBufferHandle);
 
-   glEnable(GL_DEPTH_TEST);
-   glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+   pData = (char*)graphicsDevice->mapBuffer(particleBufferHandle, 0, sizeof(glParticles));
+   memcpy(pData, &glParticles[0], sizeof(glParticles));
+   graphicsDevice->unmapBuffer(particleBufferHandle);
 
-   glUseProgram(shaderProgram);
+   cmdBuffer->begin();
 
-   // Update camera data
-   glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
-   glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
+   cmdBuffer->bindRenderPass(renderPassHandle);
+   cmdBuffer->setViewport(0, 0, windowWidth, windowHeight);
+   cmdBuffer->setScissor(0, 0, windowWidth, windowHeight);
 
-   glm::mat4 identMat = glm::mat4(1.0f);
+   cmdBuffer->setRasterizerState(rasterizerStateHandle);
+   cmdBuffer->setDepthStencilState(depthStateHandle);
 
-   // Draw Particles
-   glBindVertexArray(vao);
-   glBindBuffer(GL_ARRAY_BUFFER, particleVbo);
+   cmdBuffer->bindPipeline(pipelineHandle);
+   cmdBuffer->bindConstantBuffer(0, cameraBufferHandle, 0, sizeof(CameraUbo));
+   cmdBuffer->bindVertexBuffer(0, particleBufferHandle, sizeof(GLParticle), 0);
 
-   // Update particles
-   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glParticles), &glParticles[0]);
+   cmdBuffer->drawPrimitives(0, PARTICLE_COUNT);
 
-   glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
-   glUniformMatrix4fv(uniformModelMatLocation, 1, GL_FALSE, (const GLfloat*)&identMat[0]);
+   cmdBuffer->end();
 
-   glDrawArrays(GL_POINTS, 0, PARTICLE_COUNT);
+   const GFXCmdBuffer* buffer[1];
+   buffer[0] = cmdBuffer;
+   graphicsDevice->executeCmdBuffers(buffer, 1);
 
-   glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+   // and now we present our render pass
+   graphicsDevice->present(renderPassHandle, windowWidth, windowHeight);
 }
 
 void CpuParticlesApp::onRenderImGUI(double dt)
@@ -200,12 +296,14 @@ void CpuParticlesApp::onRenderImGUI(double dt)
    ImGui::Begin("Debug Information & Options");
    ImGui::SetWindowSize(ImVec2(700, 180));
    ImGui::Text("Frame Rate: %.1f FPS", ImGui::GetIO().Framerate);
-   ImGui::Separator();
 
+#ifdef GFX_OPENGL
+   ImGui::Separator();
    ImGui::Text("OpenGL Driver Information:");
    ImGui::Text("   Renderer: %s", glGetString(GL_RENDERER));
    ImGui::Text("   Vendor: %s", glGetString(GL_VENDOR));
    ImGui::Text("   Version: %s", glGetString(GL_VERSION));
+#endif
 
    ImGui::Separator();
 

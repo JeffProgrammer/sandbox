@@ -1,5 +1,6 @@
 #include "app.h"
 #include "core/camera.h"
+#include "gfx/gfxDevice.h"
 
 struct CameraUbo
 {
@@ -61,16 +62,20 @@ private:
    int windowWidth;
    int windowHeight;
 
-   GLuint shaderProgram;
+   GFXDevice* graphicsDevice;
+   GFXCmdBuffer* cmdBuffer;
 
-   GLuint particleVbo;
-   GLuint vao;
-   GLuint cameraUbo;
+   StateBlockHandle depthStateHandle;
+   StateBlockHandle rasterizerStateHandle;
 
-   GLuint uniformCameraLocationBlock;
+   RenderPassHandle renderPassHandle;
+   TextureHandle colorRenderPassAttachmentHandle;
+   TextureHandle depthRenderPassAttachmentHandle;
 
-   GLuint cameraUboLocation;
-   GLuint uniformModelMatLocation;
+   PipelineHandle pipelineHandle;
+
+   BufferHandle cameraBufferHandle;
+   BufferHandle particleBufferHandle;
 
    bool vsync;
    bool freeze;
