@@ -6,13 +6,13 @@ layout(location = 1) in vec3 normal;
 out vec3 fPOSITION;
 out vec3 fNORMAL;
 
-layout(std140) uniform CameraBuffer 
+layout(std140, binding = 0) uniform CameraBuffer 
 {
    mat4 proj;
    mat4 view;
 };
 
-layout(std140) uniform CubeInstanceBuffer 
+layout(std140, binding = 2) uniform CubeInstanceBuffer 
 {
     mat4 modelMatrix[CUBE_COUNT];
 };

@@ -1,11 +1,11 @@
 #include <stdio.h>
-#include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/color_space.hpp>
 #include <imgui.h>
 #include "apps/04_Forward_Rendering/04ForwardRendering.h"
 #include "core/cube.h"
-#include "gl/shader.h"
+#include "gfx/gfxCmdBuffer.h"
+#include "gfx/OpenGL/gfxGLDevice.h"
 
 IMPLEMENT_APPLICATION(ForwardRenderingApplication);
 
@@ -58,23 +58,87 @@ void ForwardRenderingApplication::updatePerspectiveMatrix()
 
 void ForwardRenderingApplication::initGL()
 {
-   glGenVertexArrays(1, &vao);
-   glBindVertexArray(vao);
+   graphicsDevice = new GFXGLDevice();
+   cmdBuffer = new GFXCmdBuffer();
 
-   glGenBuffers(1, &vbo);
-   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertsBuffer), cubeVertsBuffer, GL_STATIC_DRAW);
+   {
+      GFXTextureStateDesc colorTexDesc = {};
+      colorTexDesc.height = windowHeight;
+      colorTexDesc.width = windowWidth;
+      colorTexDesc.type = GFXTextureType::TEXTURE_2D;
+      colorTexDesc.levels = 1;
+      colorTexDesc.internalFormat = GFXTextureInternalFormat::RGBA8;
 
-   glEnableVertexAttribArray(0);
-   glEnableVertexAttribArray(1);
-   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, NULL);
-   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)12);
+      GFXTextureStateDesc depthTexDesc = {};
+      depthTexDesc.height = windowHeight;
+      depthTexDesc.width = windowWidth;
+      depthTexDesc.type = GFXTextureType::TEXTURE_2D;
+      depthTexDesc.levels = 1;
+      depthTexDesc.internalFormat = GFXTextureInternalFormat::DEPTH_16;
 
-   glGenBuffers(1, &ibo);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
+      colorRenderPassAttachmentHandle = graphicsDevice->createTexture(colorTexDesc);
+      depthRenderPassAttachmentHandle = graphicsDevice->createTexture(depthTexDesc);
 
-   profiler.init();
+      GFXColorRenderPassAttachment colorAttach = {};
+      colorAttach.clearColor[0] = 0.0f;
+      colorAttach.clearColor[1] = 0.0f;
+      colorAttach.clearColor[2] = 0.0f;
+      colorAttach.clearColor[3] = 1.0f;
+      colorAttach.loadAction = GFXLoadAttachmentAction::CLEAR;
+      colorAttach.texture = colorRenderPassAttachmentHandle;
+
+      GFXDepthRenderPassAttachment depthAttach = {};
+      depthAttach.clearDepth = 1.0;
+      depthAttach.loadAction = GFXLoadAttachmentAction::CLEAR;
+      depthAttach.texture = depthRenderPassAttachmentHandle;
+
+      GFXRenderPassDesc renderPassState;
+      renderPassState.colorAttachmentCount = 1;
+      renderPassState.colorAttachments[0] = std::move(colorAttach);
+      renderPassState.depthAttachmentEnabled = true;
+      renderPassState.depthAttachment = std::move(depthAttach);
+
+      renderPassHandle = graphicsDevice->createRenderPass(renderPassState);
+   }
+
+   {
+      GFXRasterizerStateDesc rasterState;
+      rasterState.cullMode = GFXCullMode::CULL_FRONT;
+      rasterState.windingMode = GFXWindingMode::CLOCKWISE;
+      rasterState.fillMode = GFXFillMode::SOLID;
+      rasterState.enableDynamicPointSize = false;
+
+      rasterizerStateHandle = graphicsDevice->createRasterizerState(rasterState);
+   }
+
+   {
+      GFXDepthStencilStateDesc depthState;
+      depthState.enableDepthTest = true;
+      depthState.enableDepthWrite = true;
+      depthState.depthCompareFunc = GFXCompareFunc::LESS;
+
+      depthStateHandle = graphicsDevice->createDepthStencilState(depthState);
+   }
+
+   {
+      GFXBufferDesc cubeBuffer;
+      cubeBuffer.type = GFXBufferType::VERTEX_BUFFER;
+      cubeBuffer.usage = GFXBufferUsageEnum::STATIC_GPU_ONLY;
+      cubeBuffer.sizeInBytes = sizeof(cubeVertsBuffer);
+      cubeBuffer.data = (void*)cubeVertsBuffer;
+
+      vertexBufferHandle = graphicsDevice->createBuffer(cubeBuffer);
+   }
+
+   {
+      GFXBufferDesc cubeBuffer;
+      cubeBuffer.type = GFXBufferType::INDEX_BUFFER;
+      cubeBuffer.usage = GFXBufferUsageEnum::STATIC_GPU_ONLY;
+      cubeBuffer.sizeInBytes = sizeof(cubeIndices);
+      cubeBuffer.data = (void*)cubeIndices;
+
+      indexBufferHandle = graphicsDevice->createBuffer(cubeBuffer);
+   }
 
    initShader();
    initUBOs();
@@ -83,17 +147,35 @@ void ForwardRenderingApplication::initGL()
 
 void ForwardRenderingApplication::initUBOs()
 {
-   glGenBuffers(1, &cameraUbo);
-   glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
-   glBufferData(GL_UNIFORM_BUFFER, sizeof(CameraUbo), NULL, GL_DYNAMIC_DRAW);
+   {
+      GFXBufferDesc cameraBufferDesc;
+      cameraBufferDesc.type = GFXBufferType::CONSTANT_BUFFER;
+      cameraBufferDesc.usage = GFXBufferUsageEnum::DYNAMIC_CPU_TO_GPU;
+      cameraBufferDesc.sizeInBytes = sizeof(CameraUbo);
+      cameraBufferDesc.data = nullptr;
 
-   glGenBuffers(1, &lightUbo);
-   glBindBuffer(GL_UNIFORM_BUFFER, lightUbo);
-   glBufferData(GL_UNIFORM_BUFFER, sizeof(LightUbo), NULL, GL_STATIC_DRAW);
+      cameraBufferHandle = graphicsDevice->createBuffer(cameraBufferDesc);
+   }
 
-   glGenBuffers(1, &cubeUbo);
-   glBindBuffer(GL_UNIFORM_BUFFER, cubeUbo);
-   glBufferData(GL_UNIFORM_BUFFER, sizeof(CubeUbo), &cubeData, GL_STATIC_DRAW);
+   {
+      GFXBufferDesc lightBufferDesc;
+      lightBufferDesc.type = GFXBufferType::CONSTANT_BUFFER;
+      lightBufferDesc.usage = GFXBufferUsageEnum::DYNAMIC_CPU_TO_GPU;
+      lightBufferDesc.sizeInBytes = sizeof(LightUbo);
+      lightBufferDesc.data = nullptr;
+
+      lightBufferHandle = graphicsDevice->createBuffer(lightBufferDesc);
+   }
+
+   {
+      GFXBufferDesc cubeBufferDesc;
+      cubeBufferDesc.type = GFXBufferType::CONSTANT_BUFFER;
+      cubeBufferDesc.usage = GFXBufferUsageEnum::STATIC_GPU_ONLY;
+      cubeBufferDesc.sizeInBytes = sizeof(CubeUbo);
+      cubeBufferDesc.data = &cubeData;
+
+      cubeBufferHandle = graphicsDevice->createBuffer(cubeBufferDesc);
+   }
 }
 
 void ForwardRenderingApplication::createLights(int count)
@@ -117,97 +199,127 @@ void ForwardRenderingApplication::createLights(int count)
       lightData.lights[i].attenuation = glm::vec4(1.0f, 0.7f, 5.8f, 0.0f);
    }
 
-   glBindBuffer(GL_UNIFORM_BUFFER, lightUbo);
-   glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightUbo), &lightData);
+   char* pData = (char*)graphicsDevice->mapBuffer(lightBufferHandle, 0, sizeof(LightUbo));
+   memcpy(pData, &lightData, sizeof(LightUbo));
+   graphicsDevice->unmapBuffer(lightBufferHandle);
 }
 
 void ForwardRenderingApplication::initShader()
 {
+   GFXInputLayoutElementDesc inputLayoutDescs[2];
+   inputLayoutDescs[0].slot = 0;
+   inputLayoutDescs[0].count = 3;
+   inputLayoutDescs[0].type = GFXInputLayoutFormat::FLOAT;
+   inputLayoutDescs[0].divisor = GFXInputLayoutDivisor::PER_VERTEX;
+   inputLayoutDescs[0].offset = 0;
+   inputLayoutDescs[0].bufferBinding = 0;
+
+   inputLayoutDescs[1].slot = 1;
+   inputLayoutDescs[1].count = 3;
+   inputLayoutDescs[1].type = GFXInputLayoutFormat::FLOAT;
+   inputLayoutDescs[1].divisor = GFXInputLayoutDivisor::PER_VERTEX;
+   inputLayoutDescs[1].offset = 12;
+   inputLayoutDescs[1].bufferBinding = 0;
+
+   GFXInputLayoutDesc inputLayout;
+   inputLayout.count = 2;
+   inputLayout.descs = inputLayoutDescs;
+
    char* vertShader = readShaderFile("apps/04_Forward_Rendering/shaders/cube.vert");
    char* fragShader = readShaderFile("apps/04_Forward_Rendering/shaders/cube.frag");
 
-   shaderProgram = createVertexAndFragmentShaderProgram(vertShader, fragShader);
+   GFXShaderDesc shaders[2];
+   shaders[0].type = GFXShaderType::VERTEX;
+   shaders[0].code = vertShader;
+   shaders[0].codeLength = strlen(vertShader);
 
-   free(vertShader);
-   free(fragShader);
+   shaders[1].type = GFXShaderType::FRAGMENT;
+   shaders[1].code = fragShader;
+   shaders[1].codeLength = strlen(fragShader);
 
-   uniformCameraLocationBlock = glGetUniformBlockIndex(shaderProgram, "CameraBuffer");
-   uniformLightLocationBlock = glGetUniformBlockIndex(shaderProgram, "LightBuffer");
-   uniformCubeLocationBlock = glGetUniformBlockIndex(shaderProgram, "CubeInstanceBuffer");
+   GFXPipelineDesc pipelineDesc;
+   pipelineDesc.primitiveType = GFXPrimitiveType::TRIANGLE_LIST;
+   pipelineDesc.inputLayout = std::move(inputLayout);
+   pipelineDesc.shadersStages = shaders;
+   pipelineDesc.shaderStageCount = 2;
 
-   cameraUboLocation = 0;
-   lightUboLocation = 1;
-   cubeUboLocation = 2;
-
-   glUniformBlockBinding(shaderProgram, uniformCameraLocationBlock, cameraUboLocation);
-   glUniformBlockBinding(shaderProgram, uniformLightLocationBlock, lightUboLocation);
-   glUniformBlockBinding(shaderProgram, uniformCubeLocationBlock, cubeUboLocation);
+   pipelineHandle = graphicsDevice->createPipeline(pipelineDesc);
 }
 
 void ForwardRenderingApplication::destroyGL()
 {
-   glUseProgram(0);
-   glDeleteProgram(shaderProgram);
+   graphicsDevice->deleteStateBlock(depthStateHandle);
+   graphicsDevice->deleteStateBlock(rasterizerStateHandle);
 
-   GLuint deleteBuffers[5] = { vbo, ibo, cameraUbo, lightUbo, cubeUbo };
-   glDeleteBuffers(5, deleteBuffers);
+   graphicsDevice->deleteBuffer(cameraBufferHandle);
+   graphicsDevice->deleteBuffer(lightBufferHandle);
+   graphicsDevice->deleteBuffer(cubeBufferHandle);
+   graphicsDevice->deleteBuffer(vertexBufferHandle);
+   graphicsDevice->deleteBuffer(indexBufferHandle);
+   graphicsDevice->deletePipeline(pipelineHandle);
 
-   profiler.destroy();
+   graphicsDevice->deleteTexture(colorRenderPassAttachmentHandle);
+   graphicsDevice->deleteTexture(depthRenderPassAttachmentHandle);
+   graphicsDevice->deleteRenderPass(renderPassHandle);
 
-   glBindVertexArray(0);
-   glDeleteVertexArrays(1, &vao);
+   delete cmdBuffer;
+   delete graphicsDevice;
 }
 
 void ForwardRenderingApplication::render(double dt)
 {
-   profiler.begin();
+   char* pData = (char*)graphicsDevice->mapBuffer(cameraBufferHandle, 0, sizeof(CameraUbo));
+   memcpy(pData, &cameraData, sizeof(CameraUbo));
+   graphicsDevice->unmapBuffer(cameraBufferHandle);
 
-   glViewport(0, 0, windowWidth, windowHeight);
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   glClearColor(0.0, 0.0, 0.0, 1.0);
+   cmdBuffer->begin();
 
-   glEnable(GL_DEPTH_TEST);
-   glEnable(GL_CULL_FACE);
-   glCullFace(GL_BACK);
-   glFrontFace(GL_CCW);
+   cmdBuffer->bindRenderPass(renderPassHandle);
+   cmdBuffer->setViewport(0, 0, windowWidth, windowHeight);
+   cmdBuffer->setScissor(0, 0, windowWidth, windowHeight);
 
-   glUseProgram(shaderProgram);
+   cmdBuffer->setRasterizerState(rasterizerStateHandle);
+   cmdBuffer->setDepthStencilState(depthStateHandle);
 
-   glBindBuffer(GL_UNIFORM_BUFFER, cameraUbo);
-   glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraUbo), &cameraData);
+   cmdBuffer->bindPipeline(pipelineHandle);
+   cmdBuffer->bindConstantBuffer(0, cameraBufferHandle, 0, sizeof(CameraUbo));
+   cmdBuffer->bindConstantBuffer(1, lightBufferHandle, 0, sizeof(LightUbo));
+   cmdBuffer->bindConstantBuffer(2, cubeBufferHandle, 0, sizeof(CubeUbo));
 
-   glBindVertexArray(vao);
-   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+   cmdBuffer->bindVertexBuffer(0, vertexBufferHandle, sizeof(float) * 6, 0);
+   cmdBuffer->bindIndexBuffer(indexBufferHandle, GFXIndexBufferType::BITS_16, 0);
+   
+   cmdBuffer->drawIndexedPrimitivesInstanced(36, 0, CUBE_COUNT);
 
-   glBindBufferBase(GL_UNIFORM_BUFFER, cameraUboLocation, cameraUbo);
-   glBindBufferBase(GL_UNIFORM_BUFFER, lightUboLocation, lightUbo);
-   glBindBufferBase(GL_UNIFORM_BUFFER, cubeUboLocation, cubeUbo);
+   cmdBuffer->end();
 
-   glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, NULL, CUBE_COUNT);
+   const GFXCmdBuffer* buffer[1];
+   buffer[0] = cmdBuffer;
+   graphicsDevice->executeCmdBuffers(buffer, 1);
 
-   gpuTime = profiler.end();
+   // and now we present our render pass
+   graphicsDevice->present(renderPassHandle, windowWidth, windowHeight);
 }
 
 void ForwardRenderingApplication::onRenderImGUI(double dt)
 {
    ImGui::NewFrame();
    ImGui::Begin("Debug Information & Options");
-   //ImGui::SetWindowSize(ImVec2(700, 180));
-   ImGui::Text("Frame Rate: %.1f FPS Gpu Time: %.2fms", ImGui::GetIO().Framerate, gpuTime);
-   ImGui::Separator();
+   ImGui::Text("Frame Rate: %.1f FPS", ImGui::GetIO().Framerate);
 
+#ifdef GFX_OPENGL
+   ImGui::Separator();
    ImGui::Text("OpenGL Driver Information:");
    ImGui::Text("   Renderer: %s", glGetString(GL_RENDERER));
    ImGui::Text("   Vendor: %s", glGetString(GL_VENDOR));
    ImGui::Text("   Version: %s", glGetString(GL_VERSION));
+#endif
 
    ImGui::Separator();
    if (ImGui::InputInt("Light Count", &lightData.lightCount))
    {
       createLights(lightData.lightCount);
    }
-
 
    ImGui::End();
    ImGui::Render();

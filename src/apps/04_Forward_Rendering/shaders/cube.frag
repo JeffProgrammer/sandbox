@@ -1,4 +1,4 @@
-#define LIGHT_COUNT 512
+#define LIGHT_COUNT 1024
 
 in vec3 fPOSITION;
 in vec3 fNORMAL;
@@ -13,7 +13,7 @@ struct Light
    vec4 color;
 };
 
-layout(std140) uniform LightBuffer 
+layout(std140, binding = 1) uniform LightBuffer 
 {
    Light lights[LIGHT_COUNT];
    int lightCount;
@@ -58,5 +58,4 @@ void main()
    }
 
    color = vec4(lightColor.xyz + ambient_color, 1.0);
-   //color = vec4(1.0, 0.0, 0.0, 0.0); //vec4(normal, 1.0);
 }

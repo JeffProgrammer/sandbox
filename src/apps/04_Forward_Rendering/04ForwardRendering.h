@@ -2,7 +2,7 @@
 
 #include "app.h"
 #include "core/camera.h"
-#include "gl/gpuProfiler.h"
+#include "gfx/gfxDevice.h"
 
 struct CameraUbo
 {
@@ -11,7 +11,7 @@ struct CameraUbo
 };
 
 #define CUBE_COUNT 512
-#define LIGHT_COUNT 512
+#define LIGHT_COUNT 1024
 
 struct CubeUbo
 {
@@ -56,8 +56,6 @@ public:
 
 private:
    Camera camera;
-   GpuProfiler profiler;
-   float gpuTime;
 
    CameraUbo cameraData;
    CubeUbo cubeData;
@@ -66,20 +64,21 @@ private:
    int windowWidth;
    int windowHeight;
 
-   GLuint shaderProgram;
+   GFXDevice* graphicsDevice;
+   GFXCmdBuffer* cmdBuffer;
 
-   GLuint vbo;
-   GLuint ibo;
-   GLuint vao;
-   GLuint cameraUbo;
-   GLuint lightUbo;
-   GLuint cubeUbo;
+   StateBlockHandle depthStateHandle;
+   StateBlockHandle rasterizerStateHandle;
 
-   GLuint uniformCameraLocationBlock;
-   GLuint uniformCubeLocationBlock;
-   GLuint uniformLightLocationBlock;
+   RenderPassHandle renderPassHandle;
+   TextureHandle colorRenderPassAttachmentHandle;
+   TextureHandle depthRenderPassAttachmentHandle;
 
-   GLuint cameraUboLocation;
-   GLuint cubeUboLocation;
-   GLuint lightUboLocation;
+   PipelineHandle pipelineHandle;
+
+   BufferHandle cameraBufferHandle;
+   BufferHandle lightBufferHandle;
+   BufferHandle cubeBufferHandle;
+   BufferHandle vertexBufferHandle;
+   BufferHandle indexBufferHandle;
 };
