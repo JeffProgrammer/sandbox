@@ -8,10 +8,10 @@ The eventual plan is to have a modern, multithreaded command buffer and graphics
 
 ## Supported Platforms
 
-| Operating System | Architecture | API        | Compiler  |
-| :--------------: | :----------: | :--------: | :-------: |
-| Windows 7 SP1+   | x64          | OpenGL 4.3 | MSVC 2019 |
-| MacOS 10.13+     | x64, arm64   | OpenGL 4.1 | XCode 12  |
+| Operating System | Architecture | API         | Compiler  |
+| :--------------: | :----------: | :---------: | :-------: |
+| Windows 7 SP1+   | x64          | OpenGL 4.3+ | MSVC 2019 |
+| MacOS 10.14+     | x64, arm64   | Metal (WIP) | XCode 12  |
 
 *Subject to change, not all OS versions actively tested for each commit*
 
