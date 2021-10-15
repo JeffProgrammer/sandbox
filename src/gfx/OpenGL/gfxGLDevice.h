@@ -159,6 +159,11 @@ public:
    GFXGLDevice();
    virtual ~GFXGLDevice();
 
+   virtual GFXApi getApi() const override;
+   virtual const char* getApiVersionString() const override;
+   virtual const char* getGFXDeviceRendererDesc() const override;
+   virtual const char* getGFXDeviceVendorDesc() const override;
+
    virtual BufferHandle createBuffer(const GFXBufferDesc& desc) override;
    virtual void deleteBuffer(BufferHandle handle) override;
 

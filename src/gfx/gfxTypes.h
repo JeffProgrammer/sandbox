@@ -8,6 +8,12 @@ typedef unsigned int SamplerHandle;
 typedef unsigned int ResourceHandle;
 typedef unsigned int RenderPassHandle;
 
+enum class GFXApi
+{
+   OpenGL,
+   Metal
+};
+
 enum
 {
    MAX_COLOR_ATTACHMENTS = 8

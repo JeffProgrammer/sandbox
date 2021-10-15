@@ -284,12 +284,11 @@ void CubeApplication::onRenderImGUI(double dt)
    ImGui::SetWindowSize(ImVec2(400, 120));
    ImGui::Text("Frame Rate: %.1f FPS", ImGui::GetIO().Framerate);
 
-#ifdef GFX_OPENGL
    ImGui::Separator();
-   ImGui::Text("GL Renderer: %s", glGetString(GL_RENDERER));
-   ImGui::Text("GL Vendor: %s", glGetString(GL_VENDOR));
-   ImGui::Text("GL Version: %s", glGetString(GL_VERSION));
-#endif
+   ImGui::Text("%s Driver Information:", graphicsDevice->getApiString());
+   ImGui::Text("   Renderer: %s", graphicsDevice->getGFXDeviceRendererDesc());
+   ImGui::Text("   Vendor: %s", graphicsDevice->getGFXDeviceVendorDesc());
+   ImGui::Text("   Version: %s", graphicsDevice->getApiVersionString());
 
    ImGui::End();
    ImGui::Render();

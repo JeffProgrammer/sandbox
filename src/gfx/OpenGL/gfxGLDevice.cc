@@ -52,6 +52,41 @@ GFXGLDevice::~GFXGLDevice()
    glDeleteVertexArrays(1, &mState.globalVAO);
 }
 
+GFXApi GFXGLDevice::getApi() const
+{
+   return GFXApi::OpenGL;
+}
+
+const char* GFXGLDevice::getApiVersionString() const
+{
+   static char versionString[64];
+
+   memset(versionString, 0, sizeof(versionString));
+   snprintf(versionString, sizeof(versionString), "%s", glGetString(GL_VERSION));
+
+   return versionString;
+}
+
+const char* GFXGLDevice::getGFXDeviceRendererDesc() const
+{
+   static char rendererString[64];
+
+   memset(rendererString, 0, sizeof(rendererString));
+   snprintf(rendererString, sizeof(rendererString), "%s", glGetString(GL_RENDERER));
+
+   return rendererString;
+}
+
+const char* GFXGLDevice::getGFXDeviceVendorDesc() const
+{
+   static char vendorString[64];
+
+   memset(vendorString, 0, sizeof(vendorString));
+   snprintf(vendorString, sizeof(vendorString), "%s", glGetString(GL_VENDOR));
+
+   return vendorString;
+}
+
 BufferHandle GFXGLDevice::createBuffer(const GFXBufferDesc& desc)
 {
    GLenum usage = _getBufferUsage(desc.usage);

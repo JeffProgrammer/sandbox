@@ -9,6 +9,11 @@ class GFXDevice
 public:
    virtual ~GFXDevice() {}
 
+   virtual GFXApi getApi() const = 0;
+   virtual const char* getApiVersionString() const = 0;
+   virtual const char* getGFXDeviceRendererDesc() const = 0;
+   virtual const char* getGFXDeviceVendorDesc() const = 0;
+
    virtual BufferHandle createBuffer(const GFXBufferDesc& desc) = 0;
    virtual void deleteBuffer(BufferHandle handle) = 0;
 
@@ -34,4 +39,17 @@ public:
 
    virtual void executeCmdBuffers(const GFXCmdBuffer** cmdBuffers, int count) = 0;
    virtual void present(RenderPassHandle handle, int width, int height) = 0;
+
+   inline const char* getApiString()
+   {
+      switch (getApi())
+      {
+      case GFXApi::OpenGL:
+         return "OpenGL";
+      case GFXApi::Metal:
+         return "Metal";
+      }
+
+      return "";
+   }
 };

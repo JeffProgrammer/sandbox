@@ -307,13 +307,11 @@ void ForwardRenderingApplication::onRenderImGUI(double dt)
    ImGui::Begin("Debug Information & Options");
    ImGui::Text("Frame Rate: %.1f FPS", ImGui::GetIO().Framerate);
 
-#ifdef GFX_OPENGL
    ImGui::Separator();
-   ImGui::Text("OpenGL Driver Information:");
-   ImGui::Text("   Renderer: %s", glGetString(GL_RENDERER));
-   ImGui::Text("   Vendor: %s", glGetString(GL_VENDOR));
-   ImGui::Text("   Version: %s", glGetString(GL_VERSION));
-#endif
+   ImGui::Text("%s Driver Information:", graphicsDevice->getApiString());
+   ImGui::Text("   Renderer: %s", graphicsDevice->getGFXDeviceRendererDesc());
+   ImGui::Text("   Vendor: %s", graphicsDevice->getGFXDeviceVendorDesc());
+   ImGui::Text("   Version: %s", graphicsDevice->getApiVersionString());
 
    ImGui::Separator();
    if (ImGui::InputInt("Light Count", &lightData.lightCount))
